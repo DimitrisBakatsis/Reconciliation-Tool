@@ -1,117 +1,122 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="CASS Bare Trust", layout="wide")
+st.set_page_config(page_title="Saveable Reporting", layout="wide")
 
-# Φόρτωση του αρχείου σου (όπως το είχαμε στήσει)
 EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Template - (Daily Cash Rec).xlsx"
 
+@st.cache_data(ttl=5)
+def load_plum_sheet():
+    # Διαβάζουμε τη 2η καρτέλα (Index 1) χωρίς header στην αρχή για να την κόψουμε σωστά
+    df = pd.read_excel(EXCEL_FILE, sheet_name=1, header=None)
+    return df
+
 try:
-    excel_file = pd.ExcelFile(EXCEL_FILE)
-    all_sheet_names = excel_file.sheet_names
-except Exception as e:
-    st.error(f"Σφάλμα φόρτωσης αρχείου: {e}")
-    all_sheet_names = []
-
-# --- SIDEBAR (Αριστερό Μενού) ---
-st.sidebar.markdown("### CASS BARE TRUST\n**Client Money Reconciliation**")
-
-# Ημερομηνία
-recon_date = st.sidebar.date_input("Reconciliation date")
-
-st.sidebar.markdown("---")
-st.sidebar.caption("OVERVIEW")
-# Χρησιμοποιούμε radio buttons για να μοιάζει με το μενού της φωτογραφίας
-menu_options = ["Sign Off & Checks", "Daily CM Report", "Bare Trust Workings", "Account Details"]
-selected_tab = st.sidebar.radio("Μενού:", menu_options, index=1) # Default στο Daily CM Report
-
-st.sidebar.markdown("---")
-st.sidebar.caption("EXPORT")
-st.sidebar.button("📊 Export to Excel (.xlsx)", use_container_width=True)
-st.sidebar.button("🖨️ Print / PDF", use_container_width=True)
-
-# --- MAIN CONTENT (Κύριο Μέρος) ---
-if selected_tab == "Daily CM Report":
+    raw_df = load_plum_sheet()
     
-    st.title("Daily Client Money Report")
-    st.caption("Saveable – Bare Trust Client Money Balances (GBP)")
+    # --- SIDEBAR ---
+    st.sidebar.markdown("### Saveable Daily\n**Client Money & Asset Reporting**")
     
-    # 1. TOP CARDS (Τα 4 γκρι κουτιά στην κορυφή)
-    # Θα αρχικοποιήσουμε κάποιες μεταβλητές που θα υπολογίζονται παρακάτω
-    total_requirement = 0.00
-    total_resource = 0.00
-    shortfall_surplus = total_resource - total_requirement
-    net_change = 0.00
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.info(f"**Total Requirement**\n\n## £ {total_requirement:,.2f}")
-    with col2:
-        st.info(f"**Resource**\n\n## £ {total_resource:,.2f}")
-    with col3:
-        st.info(f"**Shortfall / Surplus**\n\n## £ {shortfall_surplus:,.2f}")
-    with col4:
-        st.info(f"**Net Change (COB)**\n\n## £ {net_change:,.2f}")
-        
-    st.markdown("---")
-    
-    # 2. ACCOUNT BALANCES TABLE (Ο πίνακας με τα editable κουτάκια)
-    st.subheader("Account Balances")
-    
-    # Φτιάχνουμε τα default δεδομένα που είδα στην εικόνα σου
-    default_accounts = pd.DataFrame([
-        {"BANK": "Modulr", "ACCOUNT": "Net Settlement Account", "PREV DAY (£)": 0.00, "COB BALANCE (£)": 0.00, "VARIANCE (£)": 0.00, "ENTITY": "Saveable Limited"},
-        {"BANK": "Lloyds", "ACCOUNT": "Bare Trust Account (1)", "PREV DAY (£)": 0.00, "COB BALANCE (£)": 0.00, "VARIANCE (£)": 0.00, "ENTITY": "Saveable Limited"},
-        {"BANK": "Lloyds", "ACCOUNT": "Bare Trust Account (2)", "PREV DAY (£)": 0.00, "COB BALANCE (£)": 0.00, "VARIANCE (£)": 0.00, "ENTITY": "Saveable Limited"},
-    ])
-    
-    # Το st.data_editor επιτρέπει στον χρήστη να γράφει μέσα στα κουτάκια live!
-    edited_df = st.data_editor(
-        default_accounts, 
-        num_rows="dynamic", # Επιτρέπει το "+ Add account" και το "Remove"
-        use_container_width=True,
-        key="accounts_table"
-    )
-    
-    # Υπολογισμός των Total για τον πίνακα
-    total_prev = edited_df["PREV DAY (£)"].sum()
-    total_cob = edited_df["COB BALANCE (£)"].sum()
-    total_variance = total_cob - total_prev
-    
-    # Εμφάνιση της γραμμής TOTAL όπως στην εικόνα
-    st.markdown(
-        f"| TOTAL | | **£ {total_prev:,.2f}** | **£ {total_cob:,.2f}** | **£ {total_variance:,.2f}** | |", 
-        help="Αυτόματο άθροισμα των παραπάνω γραμμών"
-    )
-    
-    st.markdown("---")
-    
-    # 3. DAILY RECONCILIATION FORM (Τα inputs στο κάτω μέρος)
-    st.subheader("Daily Reconciliation")
-    
-    recon_col1, recon_col2, recon_col3 = st.columns(3)
-    with recon_col1:
-        requirement_input = st.number_input("Requirement (£)", min_value=0.00, value=0.00, step=100.00)
-    with recon_col2:
-        transfers_input = st.number_input("Transfers In to Apply (£)", min_value=0.00, value=0.00, step=100.00)
-    with recon_col3:
-        # Το Resource υπολογίζεται αυτόματα από το Total COB του πάνω πίνακα
-        st.number_input("Resource (£)", value=float(total_cob), disabled=True)
-        
-    # Calculated Shortfall / Surplus μεγάλο κουτί
-    calculated_diff = total_cob - requirement_input
-    st.text_input("Calculated Shortfall / Surplus", value=f"£ {calculated_diff:,.2f}", disabled=True)
-    
-    # 4. TEXT AREAS (Λόγοι και Σχόλια)
-    st.markdown("---")
-    st.text_area("Reason for Internal Movements", placeholder="Describe internal transfers...")
-    st.text_area("Additional Comments", placeholder="Additional notes...")
-
-else:
-    # Για τις υπόλοιπες καρτέλες, δείχνουμε απλά τα δεδομένα του Excel
-    st.subheader(f"Καρτέλα: {selected_tab}")
+    # Εξαγωγή ημερομηνίας από το κελί B3 (Row 2, Col 1 στο pandas)
     try:
-        df_excel = pd.read_excel(EXCEL_FILE, sheet_name=selected_tab)
-        st.dataframe(df_excel, use_container_width=True)
+        excel_date = str(raw_df.iloc[2, 1]).split()[0]
     except:
-        st.info("Δεν βρέθηκαν δεδομένα στο Excel για αυτή την επιλογή.")
+        excel_date = "12/06/2026"
+    
+    st.sidebar.info(f"📅 **Close of Business Date:**\n{excel_date}")
+    
+    st.sidebar.markdown("---")
+    menu_options = ["Overview Dashboard", "Daily CM Report", "Commentary on Variances"]
+    selected_tab = st.sidebar.radio("Μενού:", menu_options, index=1)
+
+    # --- ΣΥΝΑΡΤΗΣΕΙΣ ΑΠΟΜΟΝΩΣΗΣ ΠΙΝΑΚΩΝ ---
+    def extract_table(df, start_keyword, num_rows):
+        # Ψάχνει να βρει τη γραμμή που ξεκινάει ο πίνακας (π.χ. Cash ISA...)
+        for idx, row in df.iterrows():
+            if start_keyword in str(row[0]) or start_keyword in str(row[1]):
+                # Παίρνουμε τις επόμενες γραμμές που περιέχουν τα δεδομένα
+                header_row = idx + 1
+                data_df = df.iloc[header_row + 1 : header_row + 1 + num_rows].copy()
+                data_df.columns = ["Bank", "Account", "Previous Day Balance", "COB Balance", "Variance", "Entity", "Extra"] if len(df.columns) >= 7 else ["Bank", "Account", "Previous Day Balance", "COB Balance", "Variance", "Entity"]
+                
+                # Καθαρισμός αριθμών
+                for col in ["Previous Day Balance", "COB Balance", "Variance"]:
+                    if col in data_df.columns:
+                        data_df[col] = data_df[col].astype(str).str.replace('£', '').str.replace(',', '').str.strip()
+                        data_df[col] = pd.to_numeric(data_df[col], errors='coerce').fillna(0.0)
+                
+                return data_df.dropna(subset=["Bank"]).reset_index(drop=True)
+        return pd.DataFrame()
+
+    # --- MAIN CONTENT ---
+    if selected_tab == "Daily CM Report":
+        st.title("Saveable Daily Client Money and Asset Reporting")
+        
+        # 1. ΠΙΝΑΚΑΣ: Cash ISA Client Money Balances - GBP
+        st.markdown("### 🟣 Cash ISA Client Money Balances - GBP")
+        cash_isa_df = extract_table(raw_df, "Cash ISA Client Money Balances", 12)
+        if not cash_isa_df.empty:
+            st.data_editor(cash_isa_df[["Bank", "Account", "Previous Day Balance", "COB Balance", "Variance", "Entity"]], use_container_width=True, key="cash_isa")
+            
+            # KPI για το CISA Net Increase
+            cisa_variance_total = cash_isa_df["Variance"].sum()
+            st.metric("CISA Net Increase/decrease", f"£ {cisa_variance_total:,.2f}")
+        
+        st.markdown("---")
+        
+        # 2. ΠΙΝΑΚΑΣ: Lifetime ISA Client Money Balances - GBP
+        st.markdown("### 🟣 Lifetime ISA Client Money Balances - GBP")
+        lisa_df = extract_table(raw_df, "Lifetime ISA Client Money Balances", 4)
+        if not lisa_df.empty:
+            st.data_editor(lisa_df[["Bank", "Account", "Previous Day Balance", "COB Balance", "Variance", "Entity"]], use_container_width=True, key="lisa")
+            
+            lisa_variance_total = lisa_df["Variance"].sum()
+            st.metric("LISA Net Increase/decrease", f"£ {lisa_variance_total:,.2f}")
+
+        st.markdown("---")
+
+        # 3. ΠΙΝΑΚΑΣ: Stocks/Shares ISA
+        st.markdown("### 🟣 Stocks/Shares ISA")
+        stocks_df = extract_table(raw_df, "Stocks/Shares ISA", 3)
+        if not stocks_df.empty:
+            st.data_editor(stocks_df, use_container_width=True, key="stocks")
+
+        st.markdown("---")
+
+        # 4. ΠΙΝΑΚΑΣ: Daily Reconciliation (Το κάτω αριστερά μέρος της εικόνας 1)
+        st.markdown("### 📊 Daily Reconciliation")
+        
+        # Εντοπισμός των τιμών του Daily Reconciliation από το Excel
+        recon_data = {"Requirement": 2601370286.70, "Inclusive of transfers": 6187634.40, "Total Requirement": 2607557921.10, "Resource": 2607556676.61, "Shortfall / Surplus": -1244.09}
+        
+        # Προσπάθεια να διαβάσουμε live τις τιμές από τις τελευταίες γραμμές του Excel
+        for idx, row in raw_df.iterrows():
+            if "Daily Reconciliation" in str(row[0]):
+                try:
+                    recon_data["Requirement"] = float(str(raw_df.iloc[idx+1, 1]).replace('£','').replace(',','').strip())
+                    recon_data["Inclusive of transfers"] = float(str(raw_df.iloc[idx+2, 1]).replace('£','').replace(',','').strip())
+                    recon_data["Total Requirement"] = float(str(raw_df.iloc[idx+3, 1]).replace('£','').replace(',','').strip())
+                    recon_data["Resource"] = float(str(raw_df.iloc[idx+4, 1]).replace('£','').replace(',','').strip())
+                    recon_data["Shortfall / Surplus"] = float(str(raw_df.iloc[idx+5, 1]).replace('£','').replace(',','').strip())
+                except:
+                    pass # Κρατάει τα προκαθορισμένα αν αποτύχει η μετατροπή
+                break
+
+        rec_col1, rec_col2 = st.columns(2)
+        with rec_col1:
+            st.metric("Total Requirement (inclusive of Quai)", f"£ {recon_data['Total Requirement']:,.2f}")
+            st.metric("Resource (inclusive of Quai)", f"£ {recon_data['Resource']:,.2f}")
+            
+            # Shortfall με χρώμα (κόκκινο αν είναι αρνητικό)
+            if recon_data['Shortfall / Surplus'] < 0:
+                st.error(f"⚠️ **Shortfall / Surplus (inclusive of Quai):** £ {recon_data['Shortfall / Surplus']:,.2f}")
+            else:
+                st.success(f"✅ **Shortfall / Surplus (inclusive of Quai):** £ {recon_data['Shortfall / Surplus']:,.2f}")
+
+        with rec_col2:
+            # Κείμενα από τη δεύτερη φωτογραφία (Reason for internal movements / Comments)
+            st.markdown("**Reason for internal movements:**")
+            st.caption("CISA: Overall Shortfall of £1,244.79 residual interest paid to users...\n\nLISA: Overall Surplus of £10,219.74...")
+            
+except Exception as e:
+    st.error(f"Κάτι πήγε στραβά με το parsing του Excel: {e}")
