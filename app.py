@@ -6,7 +6,7 @@ st.set_page_config(page_title="Plum Dashboard", layout="wide")
 st.title("📊 Τοπικό Excel Dashboard")
 
 # 1. Όνομα του αρχείου που ανέβασες στο GitHub
-EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Template - (Daily Cash Rec)xlsx" 
+EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Template - (Daily Cash Rec).xlsx"
 
 try:
     # Το pandas διαβάζει αυτόματα όλα τα ονόματα των καρτελών από το Excel!
