@@ -97,7 +97,7 @@ st.markdown("""
         background-color: #1a1c24 !important; color: #ffffff !important; border: 1px solid #4a5568 !important; border-radius: 6px !important; padding: 6px 16px !important; font-size: 13px !important;
     }
     
-    /* Sidebar Layout Fixes (image_896ddf.png) */
+    /* Sidebar Layout Fixes */
     [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
     .sidebar-custom-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; }
     .sidebar-input-label { font-size: 14px; font-weight: 600; color: #ffffff; margin-top: 15px; margin-bottom: 10px; }
@@ -112,9 +112,9 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# Αρχικοποίηση session states για τα Live Logs του Commentary Suite
+# Αρχικοποίηση session states για τα Live Logs του Commentary Suite (Ξεκινάνε καθαρά)
 if "cisa_movements" not in st.session_state:
-    st.session_state.cisa_movements = [{"From": "Citibank", "To": "Lloyds EA", "Amount": "£1,000,000.00", "Reason": "CISA treasury movement of 1,000,000 between Citibank and Lloyds EA"}]
+    st.session_state.cisa_movements = []
 if "lisa_movements" not in st.session_state:
     st.session_state.lisa_movements = []
 
@@ -150,7 +150,7 @@ try:
     
     formatted_date = "16/06/2026"
 
-    # --- SIDEBAR (IMAGE_896DDF.PNG LOOK) ---
+    # --- SIDEBAR ---
     st.sidebar.markdown("<div style='padding-top: 10px;'><span style='font-size: 16px; font-weight: 700; color: #fff;'>CASS Corporate Portal</span></div>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
     st.sidebar.markdown("<div class='sidebar-custom-title'>NAVIGATION SUITE</div>", unsafe_allow_html=True)
@@ -197,7 +197,7 @@ try:
             st.markdown("""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Combined User Balance Check - LISA</div></div>
-                    <div class="recon-row"><span>Internal CUB from previous day</span>strong>£ 217,714,664.80</strong></div>
+                    <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ 217,714,664.80</strong></div>
                     <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ 251,643.28</strong></div>
                     <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ 946,498.01</strong></div>
                     <div class="recon-row total"><span>Total</span><strong>£ 218,409,519.53</strong></div>
@@ -289,7 +289,7 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🏁 ΕΠΑΝΑΦΟΡΑ: DYNAMIC AUDITING & COMMENTARY LOGS (FULL-WIDTH TABS)
+        # 🏁 LIVE TREASURY AUDIT WORKSPACE (IMAGE_89667A.PNG LOOK)
         st.markdown("### ✍️ Live Treasury Audit Workspace")
         cisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"]
         lisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"]
@@ -302,11 +302,13 @@ try:
             with col_form:
                 cisa_from = st.selectbox("From Account", cisa_accounts, key="cisa_from_sel")
                 cisa_to = st.selectbox("To Account", cisa_accounts, index=1, key="cisa_to_sel")
-                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="cisa_amt_input")
-                cisa_reason = st.text_input("Variance Explanation / Reason", value="Treasury movement liquidity coverage", key="cisa_reason_input")
+                # 🔴 ΑΛΛΑΓΗ: Default value 0.00 αντί για 1,000,000.00
+                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=10000.0, format="%.2f", key="cisa_amt_input")
+                cisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="cisa_reason_input")
                 if st.button("Commit to Audit Log", key="btn_commit_cisa"):
-                    st.session_state.cisa_movements.append({"From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason})
-                    st.rerun()
+                    if cisa_amount > 0 or cisa_reason:
+                        st.session_state.cisa_movements.append({"From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason if cisa_reason else "Manual adjustment"})
+                        st.rerun()
             with col_logs:
                 if not st.session_state.cisa_movements:
                     st.info("No active logs recorded for Cash ISA.")
@@ -331,11 +333,13 @@ try:
             with col_form_l:
                 lisa_from = st.selectbox("From Account", lisa_accounts, key="lisa_from_sel")
                 lisa_to = st.selectbox("To Account", lisa_accounts, index=1, key="lisa_to_sel")
-                lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="lisa_amt_input")
-                lisa_reason = st.text_input("Variance Explanation / Reason", value="Treasury movement liquidity coverage", key="lisa_reason_input")
+                # 🔴 ΑΛΛΑΓΗ: Default value 0.00 αντί για 1,000,000.00
+                lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=10000.0, format="%.2f", key="lisa_amt_input")
+                lisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="lisa_reason_input")
                 if st.button("Commit to Audit Log", key="btn_commit_lisa"):
-                    st.session_state.lisa_movements.append({"From": lisa_from, "To": lisa_to, "Amount": f"£{lisa_amount:,.2f}", "Reason": lisa_reason})
-                    st.rerun()
+                    if lisa_amount > 0 or lisa_reason:
+                        st.session_state.lisa_movements.append({"From": lisa_from, "To": lisa_to, "Amount": f"£{lisa_amount:,.2f}", "Reason": lisa_reason if lisa_reason else "Manual adjustment"})
+                        st.rerun()
             with col_logs_l:
                 if not st.session_state.lisa_movements:
                     st.info("No active logs recorded for Lifetime ISA.")
