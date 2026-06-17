@@ -68,6 +68,34 @@ st.markdown("""
     .reason-title { font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
     .reason-section { font-size: 13px; line-height: 1.6; color: #d1d5db; margin-bottom: 12px; }
     .reason-section strong { color: #ffffff; }
+
+    /* Log Card Style */
+    .log-card { 
+        background-color: #11141d; 
+        border-left: 4px solid #a78bfa; 
+        border-radius: 6px; 
+        padding: 16px; 
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    .log-details { flex-grow: 1; padding-right: 15px; }
+    .log-meta { font-size: 12px; color: #9ca3af; margin-bottom: 4px; font-weight: 600; }
+    .log-text { font-size: 14px; color: #ffffff; font-weight: 500; }
+    .log-amount { font-size: 15px; font-weight: 700; color: #10b981; white-space: nowrap; }
+    
+    /* Form Custom Inputs Styling */
+    div[data-testid="stSelectbox"] > label, div[data-testid="stNumberInput"] > label, div[data-testid="stTextInput"] > label {
+        color: #ffffff !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 6px !important;
+    }
+    div[data-testid="stSelectbox"] div[data-baseweb="select"], div[data-testid="stNumberInput"] input, div[data-testid="stTextInput"] input {
+        background-color: #1a1c24 !important; border: 1px solid #2d3748 !important; color: #ffffff !important; border-radius: 6px !important;
+    }
+    .stButton > button {
+        background-color: #1a1c24 !important; color: #ffffff !important; border: 1px solid #4a5568 !important; border-radius: 6px !important; padding: 6px 16px !important; font-size: 13px !important;
+    }
     
     /* Sidebar Layout Fixes (image_896ddf.png) */
     [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
@@ -84,10 +112,15 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
+# Αρχικοποίηση session states για τα Live Logs του Commentary Suite
+if "cisa_movements" not in st.session_state:
+    st.session_state.cisa_movements = [{"From": "Citibank", "To": "Lloyds EA", "Amount": "£1,000,000.00", "Reason": "CISA treasury movement of 1,000,000 between Citibank and Lloyds EA"}]
+if "lisa_movements" not in st.session_state:
+    st.session_state.lisa_movements = []
+
 try:
     xl = load_raw_excel()
     
-    # Πλήρης λίστα μενού βάσει του Excel
     full_menu_options = [
         "1. Sign Off & Other Checks",
         "2. Daily Client Money Report",
@@ -117,15 +150,12 @@ try:
     
     formatted_date = "16/06/2026"
 
-    # --- SIDEBAR (ΑΓΓΛΙΚΟΙ ΤΙΤΛΟΙ & CLEAN LOOK) ---
+    # --- SIDEBAR (IMAGE_896DDF.PNG LOOK) ---
     st.sidebar.markdown("<div style='padding-top: 10px;'><span style='font-size: 16px; font-weight: 700; color: #fff;'>CASS Corporate Portal</span></div>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
-    
-    # 🔴 Διόρθωση: Καθαρό κείμενο χωρίς HTML tags που σπάει το Streamlit
     st.sidebar.markdown("<div class='sidebar-custom-title'>NAVIGATION SUITE</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<div class='sidebar-input-label'>Select Worksheet:</div>", unsafe_allow_html=True)
     
-    # st.sidebar.radio με κρυμμένο το default label για να μη βγάζει διπλούς τίτλους
     selected_tab = st.sidebar.radio(
         "Worksheet Selector", 
         filtered_menu, 
@@ -149,13 +179,10 @@ try:
         st.markdown("### Manual Combined User Balance Suite")
         
         col1, col2 = st.columns(2)
-        
         with col1:
             st.markdown("""
                 <div class="workspace-card">
-                    <div class="workspace-header">
-                        <div class="workspace-title">Combined User Balance Check - CISA</div>
-                    </div>
+                    <div class="workspace-header"><div class="workspace-title">Combined User Balance Check - CISA</div></div>
                     <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ 2,386,124,297.55</strong></div>
                     <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ 10,417,421.49</strong></div>
                     <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ 11,826,133.22</strong></div>
@@ -169,10 +196,8 @@ try:
         with col2:
             st.markdown("""
                 <div class="workspace-card">
-                    <div class="workspace-header">
-                        <div class="workspace-title">Combined User Balance Check - LISA</div>
-                    </div>
-                    <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ 217,714,664.80</strong></div>
+                    <div class="workspace-header"><div class="workspace-title">Combined User Balance Check - LISA</div></div>
+                    <div class="recon-row"><span>Internal CUB from previous day</span>strong>£ 217,714,664.80</strong></div>
                     <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ 251,643.28</strong></div>
                     <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ 946,498.01</strong></div>
                     <div class="recon-row total"><span>Total</span><strong>£ 218,409,519.53</strong></div>
@@ -186,6 +211,7 @@ try:
     # 📊 VIEW: 2. DAILY CLIENT MONEY REPORT
     # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
+        # 1. KPI Cards
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card">
@@ -209,7 +235,7 @@ try:
         
         st.markdown("### Client Money Balances & Asset Ledger Suite")
 
-        # CISA Table
+        # Cash ISA Table
         st.markdown("""
             <div class="table-header-container">
                 <div class="table-title">Cash ISA Client Money Balances - GBP</div>
@@ -226,7 +252,7 @@ try:
         ])
         st.data_editor(cash_isa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="cash_isa_grid")
         
-        # LISA Table
+        # Lifetime ISA Table
         st.markdown("""
             <div class="table-header-container">
                 <div class="table-title">Lifetime ISA Client Money Balances - GBP</div>
@@ -242,7 +268,7 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        # Commentary Block
+        # 📋 Grey Summary Box
         st.markdown("""
             <div class="reason-box">
                 <div class="reason-title">📋 Reason for internal movements & Commentary</div>
@@ -263,12 +289,82 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
+        # 🏁 ΕΠΑΝΑΦΟΡΑ: DYNAMIC AUDITING & COMMENTARY LOGS (FULL-WIDTH TABS)
+        st.markdown("### ✍️ Live Treasury Audit Workspace")
+        cisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"]
+        lisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"]
+        
+        audit_tab_cisa, audit_tab_lisa = st.tabs(["🔒 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
+        
+        with audit_tab_cisa:
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_form, col_logs = st.columns([1, 2])
+            with col_form:
+                cisa_from = st.selectbox("From Account", cisa_accounts, key="cisa_from_sel")
+                cisa_to = st.selectbox("To Account", cisa_accounts, index=1, key="cisa_to_sel")
+                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="cisa_amt_input")
+                cisa_reason = st.text_input("Variance Explanation / Reason", value="Treasury movement liquidity coverage", key="cisa_reason_input")
+                if st.button("Commit to Audit Log", key="btn_commit_cisa"):
+                    st.session_state.cisa_movements.append({"From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason})
+                    st.rerun()
+            with col_logs:
+                if not st.session_state.cisa_movements:
+                    st.info("No active logs recorded for Cash ISA.")
+                else:
+                    for idx, entry in enumerate(st.session_state.cisa_movements):
+                        st.markdown(f"""
+                            <div class="log-card">
+                                <div class="log-details">
+                                    <div class="log-meta">🔄 FROM {entry['From']} ➜ TO {entry['To']}</div>
+                                    <div class="log-text">{entry['Reason']}</div>
+                                </div>
+                                <div class="log-amount">{entry['Amount']}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        if st.button(f"🗑 Remove Entry", key=f"del_cisa_{idx}"):
+                            st.session_state.cisa_movements.pop(idx)
+                            st.rerun()
+
+        with audit_tab_lisa:
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_form_l, col_logs_l = st.columns([1, 2])
+            with col_form_l:
+                lisa_from = st.selectbox("From Account", lisa_accounts, key="lisa_from_sel")
+                lisa_to = st.selectbox("To Account", lisa_accounts, index=1, key="lisa_to_sel")
+                lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="lisa_amt_input")
+                lisa_reason = st.text_input("Variance Explanation / Reason", value="Treasury movement liquidity coverage", key="lisa_reason_input")
+                if st.button("Commit to Audit Log", key="btn_commit_lisa"):
+                    st.session_state.lisa_movements.append({"From": lisa_from, "To": lisa_to, "Amount": f"£{lisa_amount:,.2f}", "Reason": lisa_reason})
+                    st.rerun()
+            with col_logs_l:
+                if not st.session_state.lisa_movements:
+                    st.info("No active logs recorded for Lifetime ISA.")
+                else:
+                    for idx, entry in enumerate(st.session_state.lisa_movements):
+                        st.markdown(f"""
+                            <div class="log-card">
+                                <div class="log-details">
+                                    <div class="log-meta">🔄 FROM {entry['From']} ➜ TO {entry['To']}</div>
+                                    <div class="log-text">{entry['Reason']}</div>
+                                </div>
+                                <div class="log-amount">{entry['Amount']}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        if st.button(f"🗑️ Remove Entry", key=f"del_lisa_{idx}"):
+                            st.session_state.lisa_movements.pop(idx)
+                            st.rerun()
+
+        # Expandable Sub-Ledgers
+        st.markdown("<br>### 🔍 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
+        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown"):
+            stocks_df = pd.DataFrame([{"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys", "Previous Day Balance": 1912753.33, "COB Balance": 1413133.97, "Variance": -499619.0, "Performed By": "Quai - Cash Held"}])
+            st.data_editor(stocks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_grid")
+
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
     # ==========================================
     else:
         st.markdown(f"### 📂 View Mode: {selected_tab}")
-        st.write(f"Loading dynamic records from Excel workbook for section: {selected_tab}")
         try:
             df_any = pd.read_excel(EXCEL_FILE, sheet_name=selected_tab, header=None)
             st.dataframe(df_any.dropna(how='all').reset_index(drop=True), use_container_width=True)
