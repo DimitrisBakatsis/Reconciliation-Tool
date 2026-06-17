@@ -69,9 +69,10 @@ st.markdown("""
     .reason-section { font-size: 13px; line-height: 1.6; color: #d1d5db; margin-bottom: 12px; }
     .reason-section strong { color: #ffffff; }
     
-    /* Inputs */
+    /* Sidebar Layout Fixes (image_896ddf.png) */
     [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
-    .sidebar-section-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 20px; margin-bottom: 8px; text-transform: uppercase; }
+    .sidebar-custom-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; }
+    .sidebar-input-label { font-size: 14px; font-weight: 600; color: #ffffff; margin-top: 15px; margin-bottom: 10px; }
     
     .stDataEditor { border-top: none !important; border-radius: 0 0 8px 8px !important; }
     </style>
@@ -86,7 +87,7 @@ def load_raw_excel():
 try:
     xl = load_raw_excel()
     
-    # 1. Πλήρης λίστα μενού 
+    # Πλήρης λίστα μενού βάσει του Excel
     full_menu_options = [
         "1. Sign Off & Other Checks",
         "2. Daily Client Money Report",
@@ -110,18 +111,26 @@ try:
         "15. Reconciliation actions (aut"
     ]
     
-    # 🔴 ΦΙΛΤΡΑΡΙΣΜΑ: Αποκλείουμε μόνο τα 5 υπογραμμισμένα με κίτρινο
+    # ΦΙΛΤΡΑΡΙΣΜΑ: Αποκλείουμε μόνο τα 5 κίτρινα
     excluded_yellow_sheets = ["Unalloc_Data", "CISA Funding", "LISA Funding", "CISA Breaks", "LISA Breaks"]
     filtered_menu = [item for item in full_menu_options if item not in excluded_yellow_sheets]
     
     formatted_date = "16/06/2026"
 
-    # --- SIDEBAR ---
+    # --- SIDEBAR (ΑΓΓΛΙΚΟΙ ΤΙΤΛΟΙ & CLEAN LOOK) ---
     st.sidebar.markdown("<div style='padding-top: 10px;'><span style='font-size: 16px; font-weight: 700; color: #fff;'>CASS Corporate Portal</span></div>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
-    st.sidebar.markdown("<div class='sidebar-section-title'>Navigation Suite</div>")
     
-    selected_tab = st.sidebar.radio("Επιλογή Καρτέλας:", filtered_menu)
+    # 🔴 Διόρθωση: Καθαρό κείμενο χωρίς HTML tags που σπάει το Streamlit
+    st.sidebar.markdown("<div class='sidebar-custom-title'>NAVIGATION SUITE</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='sidebar-input-label'>Select Worksheet:</div>", unsafe_allow_html=True)
+    
+    # st.sidebar.radio με κρυμμένο το default label για να μη βγάζει διπλούς τίτλους
+    selected_tab = st.sidebar.radio(
+        "Worksheet Selector", 
+        filtered_menu, 
+        label_visibility="collapsed"
+    )
 
     # --- MAIN GLOBAL HEADER ---
     st.markdown("<div class='main-header'>CASS Reconciliation & Daily Client Money Reporting</div>", unsafe_allow_html=True)
@@ -259,12 +268,12 @@ try:
     # ==========================================
     else:
         st.markdown(f"### 📂 View Mode: {selected_tab}")
-        st.write(f"Φόρτωση δεδομένων από το αρχείο Excel για την ενότητα: {selected_tab}")
+        st.write(f"Loading dynamic records from Excel workbook for section: {selected_tab}")
         try:
             df_any = pd.read_excel(EXCEL_FILE, sheet_name=selected_tab, header=None)
             st.dataframe(df_any.dropna(how='all').reset_index(drop=True), use_container_width=True)
         except:
-            st.warning("Η καρτέλα αντλείται live από το backend spreadsheet template.")
+            st.warning("Sheet data fetched live from backend template storage.")
 
 except Exception as e:
     st.error(f"System Error: {e}")
