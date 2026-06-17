@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import re
 
 # 1. Page Config & Premium UI Styling
 st.set_page_config(page_title="CASS Reconciliation Hub", layout="wide", initial_sidebar_state="expanded")
@@ -55,6 +54,7 @@ st.markdown("""
     .workspace-title { font-size: 13px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; }
     .recon-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1f2937; font-size: 14px; color: #d1d5db; }
     .recon-row.total { border-bottom: none; font-weight: 700; font-size: 15px; color: #3b82f6; padding-top: 14px; }
+    .recon-row.difference { border-bottom: none; font-weight: 700; font-size: 15px; color: #10b981; padding-top: 14px; }
     
     /* Reason for internal movements block */
     .reason-box {
@@ -68,38 +68,11 @@ st.markdown("""
     .reason-title { font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
     .reason-section { font-size: 13px; line-height: 1.6; color: #d1d5db; margin-bottom: 12px; }
     .reason-section strong { color: #ffffff; }
-
-    /* Log Card Style */
-    .log-card { 
-        background-color: #11141d; 
-        border-left: 4px solid #a78bfa; 
-        border-radius: 6px; 
-        padding: 16px; 
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-    }
-    .log-details { flex-grow: 1; padding-right: 15px; }
-    .log-meta { font-size: 12px; color: #9ca3af; margin-bottom: 4px; font-weight: 600; }
-    .log-text { font-size: 14px; color: #ffffff; font-weight: 500; }
-    .log-amount { font-size: 15px; font-weight: 700; color: #10b981; white-space: nowrap; }
     
     /* Inputs */
-    div[data-testid="stSelectbox"] > label, div[data-testid="stNumberInput"] > label, div[data-testid="stTextInput"] > label {
-        color: #ffffff !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 6px !important;
-    }
-    div[data-testid="stSelectbox"] div[data-baseweb="select"], div[data-testid="stNumberInput"] input, div[data-testid="stTextInput"] input {
-        background-color: #1a1c24 !important; border: 1px solid #2d3748 !important; color: #ffffff !important; border-radius: 6px !important;
-    }
-    .stButton > button {
-        background-color: #1a1c24 !important; color: #ffffff !important; border: 1px solid #4a5568 !important; border-radius: 6px !important;
-    }
     [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
     .sidebar-section-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 20px; margin-bottom: 8px; text-transform: uppercase; }
     
-    /* Remove padding under data editor headers */
     .stDataEditor { border-top: none !important; border-radius: 0 0 8px 8px !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -113,12 +86,12 @@ def load_raw_excel():
 try:
     xl = load_raw_excel()
     
-    # Πλήρης λίστα μενού βάσει των screenshots σου
+    # 1. Πλήρης λίστα μενού 
     full_menu_options = [
         "1. Sign Off & Other Checks",
         "2. Daily Client Money Report",
         "3. Unalloc Rec",
-        "Unalloc_Data",  # 🟡 Κίτρινο
+        "Unalloc_Data",  
         "4. CISA - CASS Internal Rec",
         "5. CISA Internal Workings",
         "6. CISA - CASS External Rec",
@@ -129,10 +102,10 @@ try:
         "11. LISA - CASS External Rec",
         "12. LISA External Workings",
         "13. LISA Citi v Ledger",
-        "CISA Funding",  # 🟡 Κίτρινο
-        "LISA Funding",  # 🟡 Κίτρινο
-        "CISA Breaks",   # 🟡 Κίτρινο
-        "LISA Breaks",   # 🟡 Κίτρινο
+        "CISA Funding",  
+        "LISA Funding",  
+        "CISA Breaks",   
+        "LISA Breaks",   
         "14. Client Money Account Detail",
         "15. Reconciliation actions (aut"
     ]
@@ -148,7 +121,6 @@ try:
     st.sidebar.markdown("---")
     st.sidebar.markdown("<div class='sidebar-section-title'>Navigation Suite</div>")
     
-    # Εμφάνιση των καθαρών επιλογών στο Sidebar
     selected_tab = st.sidebar.radio("Επιλογή Καρτέλας:", filtered_menu)
 
     # --- MAIN GLOBAL HEADER ---
@@ -162,10 +134,49 @@ try:
     }
 
     # ==========================================
-    # 🟢 ΠΕΡΙΕΧΟΜΕΝΟ ΑΝΑΛΟΓΑ ΜΕ ΤΗΝ ΕΠΙΛΟΓΗ
+    # 👑 PREMIUM VIEW: 1. SIGN OFF & OTHER CHECKS
     # ==========================================
-    if selected_tab == "2. Daily Client Money Report":
-        # 1. KPI Cards
+    if selected_tab == "1. Sign Off & Other Checks":
+        st.markdown("### Manual Combined User Balance Suite")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+                <div class="workspace-card">
+                    <div class="workspace-header">
+                        <div class="workspace-title">Combined User Balance Check - CISA</div>
+                    </div>
+                    <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ 2,386,124,297.55</strong></div>
+                    <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ 10,417,421.49</strong></div>
+                    <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ 11,826,133.22</strong></div>
+                    <div class="recon-row total"><span>Total</span><strong>£ 2,387,533,039.28</strong></div>
+                    <hr style="border-color: #1f2937; margin: 15px 0;">
+                    <div class="recon-row"><span>Internal CUB from Rec Date</span><strong>£ 2,387,533,039.28</strong></div>
+                    <div class="recon-row difference"><span>Difference</span><strong>£ 0.00</strong></div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with col2:
+            st.markdown("""
+                <div class="workspace-card">
+                    <div class="workspace-header">
+                        <div class="workspace-title">Combined User Balance Check - LISA</div>
+                    </div>
+                    <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ 217,714,664.80</strong></div>
+                    <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ 251,643.28</strong></div>
+                    <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ 946,498.01</strong></div>
+                    <div class="recon-row total"><span>Total</span><strong>£ 218,409,519.53</strong></div>
+                    <hr style="border-color: #1f2937; margin: 15px 0;">
+                    <div class="recon-row"><span>Internal CUB from Rec Date</span><strong>£ 218,409,519.53</strong></div>
+                    <div class="recon-row difference"><span>Difference</span><strong>£ 0.00</strong></div>
+                </div>
+            """, unsafe_allow_html=True)
+
+    # ==========================================
+    # 📊 VIEW: 2. DAILY CLIENT MONEY REPORT
+    # ==========================================
+    elif selected_tab == "2. Daily Client Money Report":
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card">
@@ -189,7 +200,7 @@ try:
         
         st.markdown("### Client Money Balances & Asset Ledger Suite")
 
-        # --- 2. CASH ISA LEDGER ---
+        # CISA Table
         st.markdown("""
             <div class="table-header-container">
                 <div class="table-title">Cash ISA Client Money Balances - GBP</div>
@@ -206,7 +217,7 @@ try:
         ])
         st.data_editor(cash_isa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="cash_isa_grid")
         
-        # --- 3. LIFETIME ISA LEDGER ---
+        # LISA Table
         st.markdown("""
             <div class="table-header-container">
                 <div class="table-title">Lifetime ISA Client Money Balances - GBP</div>
@@ -222,7 +233,7 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        # 4. Commentary & Internal movements block
+        # Commentary Block
         st.markdown("""
             <div class="reason-box">
                 <div class="reason-title">📋 Reason for internal movements & Commentary</div>
@@ -243,19 +254,12 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-    elif selected_tab == "3. Unalloc Rec":
-        st.markdown("### 📂 Unalloc Rec Ledger Workspace")
-        st.info("Εμφάνιση δεδομένων για την καρτέλα Unalloc Rec.")
-        # Δημιουργία placeholder data table για την επιλεγμένη καρτέλα
-        dummy_df = pd.DataFrame([{"Parameter": "Pending Reconciliations", "Status": "Active", "Count": 12}])
-        st.dataframe(dummy_df, use_container_width=True)
-
+    # ==========================================
+    # 📂 FALLBACK VIEW FOR OTHER SHEETS
+    # ==========================================
     else:
-        # Fallback γενική προβολή για τις υπόλοιπες αριθμημένες καρτέλες
         st.markdown(f"### 📂 View Mode: {selected_tab}")
-        st.write(f"Φόρτωση ζωντανών δεδομένων από το αρχείο Excel για την ενότητα: {selected_tab}")
-        
-        # Προσπάθεια ανάγνωσης της αντίστοιχης καρτέλας αν υπάρχει στο Excel, αλλιώς εμφάνιση dummy view
+        st.write(f"Φόρτωση δεδομένων από το αρχείο Excel για την ενότητα: {selected_tab}")
         try:
             df_any = pd.read_excel(EXCEL_FILE, sheet_name=selected_tab, header=None)
             st.dataframe(df_any.dropna(how='all').reset_index(drop=True), use_container_width=True)
