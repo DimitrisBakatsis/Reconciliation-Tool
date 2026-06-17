@@ -112,7 +112,7 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# Αρχικοποίηση session states για τα Live Logs του Commentary Suite (Ξεκινάνε καθαρά)
+# Αρχικοποίηση session states για τα Live Logs του Commentary Suite (Ξεκινάνε πλέον τελείως άδεια)
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
 if "lisa_movements" not in st.session_state:
@@ -302,8 +302,10 @@ try:
             with col_form:
                 cisa_from = st.selectbox("From Account", cisa_accounts, key="cisa_from_sel")
                 cisa_to = st.selectbox("To Account", cisa_accounts, index=1, key="cisa_to_sel")
-                # 🔴 ΑΛΛΑΓΗ: Default value 0.00 αντί για 1,000,000.00
-                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=10000.0, format="%.2f", key="cisa_amt_input")
+                
+                # 🛠️ ΔΙΟΡΘΩΣΗ: Αλλαγή του key σε 'cisa_amt_zero' για να σβήσει οριστικά το 1.000.000 από τη μνήμη
+                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="cisa_amt_zero")
+                
                 cisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="cisa_reason_input")
                 if st.button("Commit to Audit Log", key="btn_commit_cisa"):
                     if cisa_amount > 0 or cisa_reason:
@@ -333,8 +335,10 @@ try:
             with col_form_l:
                 lisa_from = st.selectbox("From Account", lisa_accounts, key="lisa_from_sel")
                 lisa_to = st.selectbox("To Account", lisa_accounts, index=1, key="lisa_to_sel")
-                # 🔴 ΑΛΛΑΓΗ: Default value 0.00 αντί για 1,000,000.00
-                lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=10000.0, format="%.2f", key="lisa_amt_input")
+                
+                # 🛠️ ΔΙΟΡΘΩΣΗ: Αλλαγή του key σε 'lisa_amt_zero' για να σβήσει οριστικά το 1.000.000 από τη μνήμη
+                lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="lisa_amt_zero")
+                
                 lisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="lisa_reason_input")
                 if st.button("Commit to Audit Log", key="btn_commit_lisa"):
                     if lisa_amount > 0 or lisa_reason:
