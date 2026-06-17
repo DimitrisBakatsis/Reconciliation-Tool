@@ -1,35 +1,106 @@
 import streamlit as st
 import pandas as pd
+import re
 
-# 1. Page Config & High-End Enterprise Styling
+# 1. Page Config & Premium UI Styling
 st.set_page_config(page_title="CASS Reconciliation Hub", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
     .stApp { background-color: #0b0c10; color: #e5e7eb; font-family: 'Inter', sans-serif; }
-    
-    /* Top Banner Styling */
     .main-header { font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; }
     .date-subheader { font-size: 13px; color: #9ca3af; margin-bottom: 25px; display: flex; align-items: center; gap: 6px; }
     
-    /* Enterprise Workspace Cards */
-    .workspace-card { background-color: #11131c; border: 1px solid #1f2937; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); }
-    .workspace-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; padding-bottom: 12px; margin-bottom: 16px; }
-    .workspace-title { font-size: 14px; font-weight: 600; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; }
+    /* Top Metrics Grid */
+    .metric-grid { display: flex; gap: 16px; margin-bottom: 25px; flex-wrap: wrap; }
+    .metric-card { 
+        background-color: #11141d; 
+        border: 1px solid #1f2937; 
+        border-radius: 8px; 
+        padding: 20px; 
+        flex: 1; 
+        min-width: 220px; 
+    }
+    .metric-label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .metric-value { font-size: 24px; font-weight: 700; }
+    .metric-value.blue { color: #3b82f6; }
+    .metric-value.red { color: #ef4444; }
     
-    /* Status Badges */
-    .badge-matched { background-color: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
-    .badge-alert { background-color: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
-    .badge-purple { background-color: rgba(139, 92, 246, 0.12); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+    /* Table Header Container with Top-Right Badges */
+    .table-header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #0d0f16;
+        border: 1px solid #1f2937;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        padding: 14px 20px;
+        margin-top: 20px;
+    }
+    .table-title { font-size: 13px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; }
     
-    /* Rows for Grid Look */
+    /* Inline Floating Net Change Badges */
+    .net-change-badge {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 5px 12px;
+        border-radius: 20px;
+    }
+    .net-change-badge.red { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .net-change-badge.green { background-color: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    .workspace-card { background-color: #0d0f16; border: 1px solid #1f2937; border-radius: 8px; padding: 24px; margin-bottom: 20px; }
+    .workspace-header { border-bottom: 1px solid #1f2937; padding-bottom: 14px; margin-bottom: 20px; }
+    .workspace-title { font-size: 13px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; }
     .recon-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1f2937; font-size: 14px; color: #d1d5db; }
     .recon-row.total { border-bottom: none; font-weight: 700; font-size: 15px; color: #3b82f6; padding-top: 14px; }
     
-    /* Form & Input adjustments for Dark Theme */
-    div[data-testid="ststForm"] { border: 1px solid #1f2937 !important; }
+    /* Reason for internal movements block */
+    .reason-box {
+        background-color: #1a1c24;
+        border-left: 4px solid #3b82f6;
+        padding: 20px;
+        border-radius: 6px;
+        margin-top: 25px;
+        margin-bottom: 25px;
+    }
+    .reason-title { font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .reason-section { font-size: 13px; line-height: 1.6; color: #d1d5db; margin-bottom: 12px; }
+    .reason-section strong { color: #ffffff; }
+
+    /* Log Card Style */
+    .log-card { 
+        background-color: #11141d; 
+        border-left: 4px solid #a78bfa; 
+        border-radius: 6px; 
+        padding: 16px; 
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    .log-details { flex-grow: 1; padding-right: 15px; }
+    .log-meta { font-size: 12px; color: #9ca3af; margin-bottom: 4px; font-weight: 600; }
+    .log-text { font-size: 14px; color: #ffffff; font-weight: 500; }
+    .log-amount { font-size: 15px; font-weight: 700; color: #10b981; white-space: nowrap; }
+    
+    /* Inputs */
+    div[data-testid="stSelectbox"] > label, div[data-testid="stNumberInput"] > label, div[data-testid="stTextInput"] > label {
+        color: #ffffff !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 6px !important;
+    }
+    div[data-testid="stSelectbox"] div[data-baseweb="select"], div[data-testid="stNumberInput"] input, div[data-testid="stTextInput"] input {
+        background-color: #1a1c24 !important; border: 1px solid #2d3748 !important; color: #ffffff !important; border-radius: 6px !important;
+    }
+    .stButton > button {
+        background-color: #1a1c24 !important; color: #ffffff !important; border: 1px solid #4a5568 !important; border-radius: 6px !important;
+    }
     [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
     .sidebar-section-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 20px; margin-bottom: 8px; text-transform: uppercase; }
+    
+    /* Remove padding under data editor headers */
+    .stDataEditor { border-top: none !important; border-radius: 0 0 8px 8px !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -39,33 +110,21 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# Αρχικοποίηση session state για την αποθήκευση των σχολίων/κινήσεων (Treasury Adjustments Log)
-if "treasury_logs" not in st.session_state:
-    st.session_state.treasury_logs = []
-
 try:
     xl = load_raw_excel()
     sheet_names = xl.sheet_names
-    
-    # 📁 1. Διάβασμα Ημερομηνίας (Tab 13 -> Κελί D4)
-    try:
-        df_tab13 = pd.read_excel(EXCEL_FILE, sheet_name=12, header=None)
-        raw_date = df_tab13.iloc[3, 3]
-        formatted_date = str(raw_date).split()[0] if pd.notna(raw_date) else "16/06/2026"
-    except:
-        formatted_date = "16/06/2026"
+    formatted_date = "16/06/2026"
 
-    # --- SIDEBAR: ΕΠΑΝΕΦΕΡΑ ΚΑΙ ΤΙΣ 15 ΚΑΡΤΕΛΕΣ ---
+    # --- SIDEBAR ---
     st.sidebar.markdown("<div style='padding-top: 10px;'><span style='font-size: 16px; font-weight: 700; color: #fff;'>CASS Corporate Portal</span></div>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
-    st.sidebar.markdown("<div class='sidebar-section-title'>Active Worksheets</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='sidebar-section-title'>Active Worksheets</div>")
     selected_tab = st.sidebar.radio("Καρτέλες:", sheet_names)
 
     # --- MAIN GLOBAL HEADER ---
     st.markdown("<div class='main-header'>CASS Reconciliation & Daily Client Money Reporting</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='date-subheader'><span>📅</span> Close of Business Date: <strong>{formatted_date}</strong></div>", unsafe_allow_html=True)
 
-    # Global configurations για μορφοποίηση στηλών σε λίρες
     currency_config = {
         "Previous Day Balance": st.column_config.NumberColumn("Previous Day Balance", format="£%,.2f"),
         "COB Balance": st.column_config.NumberColumn("COB Balance", format="£%,.2f"),
@@ -85,7 +144,7 @@ try:
             with col:
                 st.markdown(f"""
                     <div class="workspace-card">
-                        <div class="workspace-header"><div class="workspace-title">{title}</div><div class="badge-matched">MATCHED</div></div>
+                        <div class="workspace-header"><div class="workspace-title" style="color:#ffffff;">{title}</div></div>
                         <div class="recon-row"><span>Internal CUB from previous day</span><span>£ {data['prev_day']:,.2f}</span></div>
                         <div class="recon-row"><span>Debits (Recon data) from Rec data</span><span>£ {data['debits']:,.2f}</span></div>
                         <div class="recon-row"><span>Credits (Recon data) from Rec data</span><span>£ {data['credits']:,.2f}</span></div>
@@ -96,38 +155,68 @@ try:
                 """, unsafe_allow_html=True)
 
     # ==========================================
-    # 🟢 TAB 2: DAILY CLIENT MONEY REPORT (ENTERPRISE LOOK)
+    # 🟢 TAB 2: DAILY CLIENT MONEY REPORT
     # ==========================================
     elif selected_tab == sheet_names[1]:
-        st.markdown("### Client Money Balances & Asset Ledger Suite")
         
-        # 1. CASH ISA MAIN LEDGER
-        st.markdown("""
-            <div class="workspace-card" style="padding-bottom: 5px; margin-bottom: 5px;">
-                <div class="workspace-header">
-                    <div class="workspace-title" style="color: #a78bfa;">Cash ISA Client Money Balances</div>
-                    <div class="badge-alert">CISA Net Change: -£971,704.00</div>
+        # 1. KPI Cards
+        st.markdown(f"""
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Requirement</div>
+                    <div class="metric-value blue">£ 2,601,370,286.70</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Resource</div>
+                    <div class="metric-value blue">£ 2,607,556,676.61</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Shortfall / Surplus</div>
+                    <div class="metric-value red">£ -1,244.09</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Net Change (COB)</div>
+                    <div class="metric-value blue">£ 3,246,757.00</div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
+        
+        st.markdown("### Client Money Balances & Asset Ledger Suite")
+        
+        if "cisa_movements" not in st.session_state:
+            st.session_state.cisa_movements = [{"From": "Citibank", "To": "Lloyds EA", "Amount": "£1,000,000.00", "Reason": "CISA treasury movement of 1,000,000 between Citibank and Lloyds EA"}]
+        if "lisa_movements" not in st.session_state:
+            st.session_state.lisa_movements = []
+
+        # --- 2. CASH ISA LEDGER (WITH ALL BANKS & BADGE) ---
+        st.markdown("""
+            <div class="table-header-container">
+                <div class="table-title">Cash ISA Client Money Balances - GBP</div>
+                <div class="net-change-badge red">CISA Net Change: -£971,704.00</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
         cash_isa_df = pd.DataFrame([
             {"Bank": "Citi Bank NA London", "Account": "Saveable Cash ISA UK Client Money (14747801)", "Previous Day Balance": 176992857.0, "COB Balance": 176021153.0, "Variance": -971704.0, "Entity": "Saveable Limited"},
             {"Bank": "Lloyds Bank Plc", "Account": "Saveable Cash ISA Client Account (27551460)", "Previous Day Balance": 3959844.0, "COB Balance": 3959844.0, "Variance": 0.0, "Entity": "Saveable Limited"},
             {"Bank": "Lloyds Bank Plc", "Account": "Saveable Cash ISA 30D Notice Client Account (27571468)", "Previous Day Balance": 747535672.0, "COB Balance": 747535672.0, "Variance": 0.0, "Entity": "Saveable Limited"},
             {"Bank": "QNB", "Account": "Qatar National Bank (4311-000545-310)", "Previous Day Balance": 1168000000.0, "COB Balance": 1168000000.0, "Variance": 0.0, "Entity": "Saveable Limited"},
-            {"Bank": "BBVA", "Account": "BBVA Easy access (01778650)", "Previous Day Balance": 294960631.0, "COB Balance": 294960631.0, "Variance": 0.0, "Entity": "Saveable Limited"}
+            {"Bank": "BlackRock QMMF", "Account": "Blackrock QMMF", "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": "Saveable Limited"},
+            {"Bank": "BBVA", "Account": "BBVA Easy access (01778650)", "Previous Day Balance": 294960631.0, "COB Balance": 294960631.0, "Variance": 0.0, "Entity": "Saveable Limited"},
+            {"Bank": "BBVA", "Account": "BBVA Notice account (06758170)", "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": "Saveable Limited"},
+            {"Bank": "Clydesdale Bank PLC", "Account": "Saveable Cash ISA 95 Day Notice (12204224)", "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": "Saveable Limited"},
+            {"Bank": "JP Morgan", "Account": "JP Morgan Client Money account (76919500)", "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": "Saveable Limited"}
         ])
         st.data_editor(cash_isa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="cash_isa_grid")
         
-        # 2. LIFETIME ISA MAIN LEDGER
+        # --- 3. LIFETIME ISA LEDGER (WITH ALL BANKS & BADGE) ---
         st.markdown("""
-            <div class="workspace-card" style="padding-bottom: 5px; margin-bottom: 5px; margin-top: 25px;">
-                <div class="workspace-header">
-                    <div class="workspace-title" style="color: #a78bfa;">Lifetime ISA Client Money Balances</div>
-                    <div class="badge-matched">LISA Net Change: +£610,408.97</div>
-                </div>
+            <div class="table-header-container">
+                <div class="table-title">Lifetime ISA Client Money Balances - GBP</div>
+                <div class="net-change-badge green">LISA Net Change: +£610,408.97</div>
             </div>
         """, unsafe_allow_html=True)
+        
         lisa_df = pd.DataFrame([
             {"Bank": "CitiBank NA London", "Account": "Saveable Lifetime ISA UK Client Money (15242487)", "Previous Day Balance": 38363170.0, "COB Balance": 38973579.0, "Variance": 610408.97, "Entity": "Saveable Limited"},
             {"Bank": "Lloyds Bank Plc", "Account": "Saveable Lifetime ISA Client Account (27561260)", "Previous Day Balance": 714980.0, "COB Balance": 714980.0, "Variance": 0.0, "Entity": "Saveable Limited"},
@@ -136,74 +225,113 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        # 3. INTERACTIVE TREASURY MOVEMENTS & COMMENTARY LOG (Αντικατάσταση του N/A)
-        st.markdown("<br>", unsafe_allow_html=True)
-        col_form, col_log = st.columns([1, 1])
-        
-        with col_form:
-            st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📥 Log Manual Treasury Movement (Ex N/A Box)</div></div>", unsafe_allow_html=True)
-            with st.form("treasury_movement_form", clear_on_submit=True):
-                t_from = st.selectbox("From Account / Institution", ["CITIBANK", "LLOYDS", "QNB", "BBVA", "MODULR"])
-                t_to = st.selectbox("To Account / Institution", ["LLOYDS", "CITIBANK", "QNB", "BBVA", "MODULR"])
-                t_amount = st.number_input("Transaction Amount (£)", min_value=0.0, value=1000000.0, step=50000.0, format="%.2f")
-                t_reason = st.text_input("Commentary / Variance Reason", value="Treasury movement liquidity coverage")
-                if st.form_submit_button("Commit Movement to Audit Log"):
-                    st.session_state.treasury_logs.append({"From": t_from, "To": t_to, "Amount": t_amount, "Reason": t_reason})
-                    st.toast("Movement recorded successfully!", icon="✅")
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-        with col_log:
-            st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📜 Active Variance Adjustments Log</div></div>", unsafe_allow_html=True)
-            if st.session_state.treasury_logs:
-                log_df = pd.DataFrame(st.session_state.treasury_logs)
-                log_df["Amount"] = log_df["Amount"].map(lambda x: f"£{x:,.2f}")
-                st.dataframe(log_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No active variance commentary or manual treasury movements posted for today.")
-            st.markdown("</div>", unsafe_allow_html=True)
+        # 4. REASON FOR INTERNAL MOVEMENTS COMMENTARY BLOCK
+        st.markdown("""
+            <div class="reason-box">
+                <div class="reason-title">📋 Reason for internal movements & Commentary</div>
+                <div class="reason-section">
+                    <strong>CISA: Overall Shortfall of £4,393.67</strong><br>
+                    • Amount of £4,393.67 residual interest paid to users as part of the transfer out process.<br>
+                    • To be moved from CISA corporate interest to CM 17/06.
+                </div>
+                <div class="reason-section">
+                    <strong>LISA: Overall Shortfall of £243.63</strong><br>
+                    • Amount of £243.63 residual interest paid to users as part of the transfer out process.<br>
+                    • To be moved from LISA corporate interest to CM 17/06.
+                </div>
+                <div class="reason-section" style="margin-bottom: 0;">
+                    <strong>Quai: Overall Surplus of £0.18</strong><br>
+                    • Quai to arrange amount to written off 17/06.
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
-        # 4. EXPANDABLE SUB-LEDGERS (Stocks/Shares, Quai, Other Client Accounts)
-        st.markdown("### 🔍 Secondary Portfolios & Trust Breakdowns")
+        # 5. AUDITING & COMMENTARY LOGS
+        st.markdown("### ✍️ Live Treasury Audit Workspace")
+        cisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"]
+        lisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"]
         
+        audit_tab_cisa, audit_tab_lisa = st.tabs(["🔒 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
+        
+        with audit_tab_cisa:
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_form, col_logs = st.columns([1, 2])
+            with col_form:
+                st.markdown("<p style='font-weight:700; color:#fff; font-size:14px; margin-bottom:15px;'>Log Manual Treasury Movement</p>", unsafe_allow_html=True)
+                cisa_from = st.selectbox("From Account", cisa_accounts, key="cisa_from_sel")
+                cisa_to = st.selectbox("To Account", cisa_accounts, index=1, key="cisa_to_sel")
+                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="cisa_amt_input")
+                cisa_reason = st.text_input("Variance Explanation / Reason", value="Treasury movement liquidity coverage", key="cisa_reason_input")
+                if st.button("Commit to Audit Log", key="btn_commit_cisa"):
+                    st.session_state.cisa_movements.append({"From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason})
+                    st.rerun()
+            with col_logs:
+                st.markdown("<p style='font-weight:700; color:#a78bfa; font-size:12px; letter-spacing:0.5px; margin-bottom:15px;'>ACTIVE VARIANCE ADJUSTMENTS</p>", unsafe_allow_html=True)
+                if not st.session_state.cisa_movements:
+                    st.info("No active logs recorded for Cash ISA.")
+                else:
+                    for idx, entry in enumerate(st.session_state.cisa_movements):
+                        st.markdown(f"""
+                            <div class="log-card">
+                                <div class="log-details">
+                                    <div class="log-meta">🔄 FROM {entry['From']} ➜ TO {entry['To']}</div>
+                                    <div class="log-text">{entry['Reason']}</div>
+                                </div>
+                                <div class="log-amount">{entry['Amount']}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        if st.button(f"🗑 Removal Entry", key=f"del_cisa_{idx}"):
+                            st.session_state.cisa_movements.pop(idx)
+                            st.rerun()
+
+        with audit_tab_lisa:
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_form_l, col_logs_l = st.columns([1, 2])
+            with col_form_l:
+                st.markdown("<p style='font-weight:700; color:#fff; font-size:14px; margin-bottom:15px;'>Log Manual Treasury Movement</p>", unsafe_allow_html=True)
+                lisa_from = st.selectbox("From Account", lisa_accounts, key="lisa_from_sel")
+                lisa_to = st.selectbox("To Account", lisa_accounts, index=1, key="lisa_to_sel")
+                lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="lisa_amt_input")
+                lisa_reason = st.text_input("Variance Explanation / Reason", value="Treasury movement liquidity coverage", key="lisa_reason_input")
+                if st.button("Commit to Audit Log", key="btn_commit_lisa"):
+                    st.session_state.lisa_movements.append({"From": lisa_from, "To": lisa_to, "Amount": f"£{lisa_amount:,.2f}", "Reason": lisa_reason})
+                    st.rerun()
+            with col_logs_l:
+                st.markdown("<p style='font-weight:700; color:#a78bfa; font-size:12px; letter-spacing:0.5px; margin-bottom:15px;'>ACTIVE VARIANCE ADJUSTMENTS</p>", unsafe_allow_html=True)
+                if not st.session_state.lisa_movements:
+                    st.info("No active logs recorded for Lifetime ISA.")
+                else:
+                    for idx, entry in enumerate(st.session_state.lisa_movements):
+                        st.markdown(f"""
+                            <div class="log-card">
+                                <div class="log-details">
+                                    <div class="log-meta">🔄 FROM {entry['From']} ➜ TO {entry['To']}</div>
+                                    <div class="log-text">{entry['Reason']}</div>
+                                </div>
+                                <div class="log-amount">{entry['Amount']}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        if st.button(f"🗑️ Remove Entry", key=f"del_lisa_{idx}"):
+                            st.session_state.lisa_movements.pop(idx)
+                            st.rerun()
+
+        # 6. EXPANDABLE SUB-LEDGERS
+        st.markdown("<br>### 🔍 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
         with st.expander("📊 Stocks / Shares ISA Ledger Breakdown"):
             stocks_df = pd.DataFrame([
-                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys", "Previous Day Balance": 1912753.33, "COB Balance": 1413133.97, "Variance": -499619.0, "Performed By": "Quai - Cash Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": 102290541.37, "COB Balance": 102342064.32, "Variance": 51522.95, "Performed By": "Quai - Units Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD Total Asset Line", "Previous Day Balance": 366903547.62, "COB Balance": 370473068.35, "Variance": 3569520.73, "Performed By": "Quai - Cash Held"}
+                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys", "Previous Day Balance": 1912753.33, "COB Balance": 1413133.97, "Variance": -499619.0, "Performed By": "Quai - Cash Held"}
             ])
             st.data_editor(stocks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_grid")
-            
-        with st.expander("🏛️ Quai Resource & Requirement Breakdown"):
-            quai_data = {"Requirement": 3532196.96, "Resource": 3532197.14, "Shortfall / Surplus": 0.18}
-            st.markdown(f"""
-                <div class="recon-row"><span>Quai Total Platform Requirement</span><span>£ {quai_data['Requirement']:,.2f}</span></div>
-                <div class="recon-row"><span>Quai Segregated Pool Resource</span><span>£ {quai_data['Resource']:,.2f}</span></div>
-                <div class="recon-row total" style="color: #10b981;"><span>Calculated Residual Surplus</span><span>£ {quai_data['Shortfall / Surplus']:,.2f}</span></div>
-            """, unsafe_allow_html=True)
-            
-        with st.expander("💶 Other Foreign Currency & Client Money Accounts"):
-            other_df = pd.DataFrame([
-                {"Bank": "Citi Bank NA London", "Account": "Saveable UK Client Money EUR (14747763)", "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": "Saveable Limited"}
-            ])
-            st.data_editor(other_df, column_config=currency_config, use_container_width=True, hide_index=True, key="other_accounts_grid")
 
-        # 5. DAILY RECONCILIATION CALCULATION BLOCK
+        # 7. DAILY RECONCILIATION CALCULATION BLOCK
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>⚙️ CASS Corporate Daily Calculation Suite</div></div>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
-        with col1:
-            st.number_input("Total Pure Requirement (£)", value=2601370286.70, format="%.2f", disabled=True)
-        with col2:
-            st.number_input("Inclusive of Transfers In to Apply (£)", value=6187634.40, format="%.2f", disabled=True)
-        with col3:
-            st.number_input("Total Eligible Resource Pool (£)", value=2607556676.61, format="%.2f", disabled=True)
-        
-        st.text_input("Net Shortfall / Surplus Result", value="-£1,244.09 (Action Required: Cover via Corporate Account)", disabled=True)
+        with col1: st.number_input("Total Pure Requirement (£)", value=2601370286.70, format="%.2f", disabled=True)
+        with col2: st.number_input("Inclusive of Transfers In to Apply (£)", value=6187634.40, format="%.2f", disabled=True)
+        with col3: st.number_input("Total Eligible Resource Pool (£)", value=2607556676.61, format="%.2f", disabled=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ==========================================
-    # 🟢 ANY OTHER TAB (AUTOMATIC POWER-VIEW)
-    # ==========================================
     else:
         st.markdown(f"### 📂 Sub-Ledger Archive View: {selected_tab}")
         df_any = pd.read_excel(EXCEL_FILE, sheet_name=selected_tab, header=None)
