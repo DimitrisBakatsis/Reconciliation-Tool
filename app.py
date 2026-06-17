@@ -20,14 +20,12 @@ st.markdown("""
     /* Status Badges */
     .badge-matched { background-color: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
     .badge-alert { background-color: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
-    .badge-purple { background-color: rgba(139, 92, 246, 0.12); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
     
     /* Rows for Grid Look */
     .recon-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1f2937; font-size: 14px; color: #d1d5db; }
     .recon-row.total { border-bottom: none; font-weight: 700; font-size: 15px; color: #3b82f6; padding-top: 14px; }
     
-    /* Form & Input adjustments for Dark Theme */
-    div[data-testid="ststForm"] { border: 1px solid #1f2937 !important; }
+    /* Sidebar Navigation Customization */
     [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
     .sidebar-section-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 20px; margin-bottom: 8px; text-transform: uppercase; }
     </style>
@@ -39,15 +37,17 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# Αρχικοποίηση session state για την αποθήκευση των σχολίων/κινήσεων (Treasury Adjustments Log)
-if "treasury_logs" not in st.session_state:
-    st.session_state.treasury_logs = []
+# Αρχικοποίηση session states για τον διαχωρισμό CISA και LISA Commentary
+if "cisa_comments" not in st.session_state:
+    st.session_state.cisa_comments = []
+if "lisa_comments" not in st.session_state:
+    st.session_state.lisa_comments = []
 
 try:
     xl = load_raw_excel()
     sheet_names = xl.sheet_names
     
-    # 📁 1. Διάβασμα Ημερομηνίας (Tab 13 -> Κελί D4)
+    # 📁 Διάβασμα Ημερομηνίας (Tab 13 -> Κελί D4)
     try:
         df_tab13 = pd.read_excel(EXCEL_FILE, sheet_name=12, header=None)
         raw_date = df_tab13.iloc[3, 3]
@@ -55,7 +55,7 @@ try:
     except:
         formatted_date = "16/06/2026"
 
-    # --- SIDEBAR: ΕΠΑΝΕΦΕΡΑ ΚΑΙ ΤΙΣ 15 ΚΑΡΤΕΛΕΣ ---
+    # --- SIDEBAR: ΟΛΕΣ ΟΙ 15 ΚΑΡΤΕΛΕΣ ---
     st.sidebar.markdown("<div style='padding-top: 10px;'><span style='font-size: 16px; font-weight: 700; color: #fff;'>CASS Corporate Portal</span></div>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
     st.sidebar.markdown("<div class='sidebar-section-title'>Active Worksheets</div>", unsafe_allow_html=True)
@@ -65,7 +65,6 @@ try:
     st.markdown("<div class='main-header'>CASS Reconciliation & Daily Client Money Reporting</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='date-subheader'><span>📅</span> Close of Business Date: <strong>{formatted_date}</strong></div>", unsafe_allow_html=True)
 
-    # Global configurations για μορφοποίηση στηλών σε λίρες
     currency_config = {
         "Previous Day Balance": st.column_config.NumberColumn("Previous Day Balance", format="£%,.2f"),
         "COB Balance": st.column_config.NumberColumn("COB Balance", format="£%,.2f"),
@@ -96,7 +95,7 @@ try:
                 """, unsafe_allow_html=True)
 
     # ==========================================
-    # 🟢 TAB 2: DAILY CLIENT MONEY REPORT (ENTERPRISE LOOK)
+    # 🟢 TAB 2: DAILY CLIENT MONEY REPORT
     # ==========================================
     elif selected_tab == sheet_names[1]:
         st.markdown("### Client Money Balances & Asset Ledger Suite")
@@ -136,33 +135,49 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        # 3. INTERACTIVE TREASURY MOVEMENTS & COMMENTARY LOG (Αντικατάσταση του N/A)
+        # 3. ΔΙΑΦΟΡΟΠΟΙΗΜΕΝΟ WORKFLOW: COMMENTARY ON VARIANCES (CISA vs LISA)
         st.markdown("<br>", unsafe_allow_html=True)
-        col_form, col_log = st.columns([1, 1])
+        st.markdown("### ✍️ Auditing & Commentary Suite")
         
-        with col_form:
-            st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📥 Log Manual Treasury Movement (Ex N/A Box)</div></div>", unsafe_allow_html=True)
-            with st.form("treasury_movement_form", clear_on_submit=True):
-                t_from = st.selectbox("From Account / Institution", ["CITIBANK", "LLOYDS", "QNB", "BBVA", "MODULR"])
-                t_to = st.selectbox("To Account / Institution", ["LLOYDS", "CITIBANK", "QNB", "BBVA", "MODULR"])
-                t_amount = st.number_input("Transaction Amount (£)", min_value=0.0, value=1000000.0, step=50000.0, format="%.2f")
-                t_reason = st.text_input("Commentary / Variance Reason", value="Treasury movement liquidity coverage")
-                if st.form_submit_button("Commit Movement to Audit Log"):
-                    st.session_state.treasury_logs.append({"From": t_from, "To": t_to, "Amount": t_amount, "Reason": t_reason})
-                    st.toast("Movement recorded successfully!", icon="✅")
-            st.markdown("</div>", unsafe_allow_html=True)
+        col_cisa, col_lisa = st.columns(2)
+        
+        # --- CASH ISA COMMENTARY BLOCK ---
+        with col_cisa:
+            st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title' style='color:#a78bfa;'>Cash ISA - Commentary on Variances</div></div>", unsafe_allow_html=True)
+            with st.form("cisa_comment_form", clear_on_submit=True):
+                # Οι ακριβείς τίτλοι από την αριστερή πλευρά της εικόνας
+                cisa_account = st.selectbox("Select Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], key="cisa_sel")
+                cisa_text = st.text_area("Variance Explanation / Treasury Action", placeholder="Type manual movement or commentary here...")
+                if st.form_submit_button("Post CISA Commentary"):
+                    if cisa_text:
+                        st.session_state.cisa_comments.append({"Account": cisa_account, "Commentary": cisa_text})
+                        st.toast("CASS CISA log updated!", icon="💜")
             
-        with col_log:
-            st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📜 Active Variance Adjustments Log</div></div>", unsafe_allow_html=True)
-            if st.session_state.treasury_logs:
-                log_df = pd.DataFrame(st.session_state.treasury_logs)
-                log_df["Amount"] = log_df["Amount"].map(lambda x: f"£{x:,.2f}")
-                st.dataframe(log_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No active variance commentary or manual treasury movements posted for today.")
+            # Εσωτερικό Log εμφάνισης για το CISA
+            if st.session_state.cisa_comments:
+                st.markdown("<p style='font-size:12px; color:#8a8f98; margin-top:10px;'>Active Ledger Logs:</p>", unsafe_allow_html=True)
+                st.dataframe(pd.DataFrame(st.session_state.cisa_comments), use_container_width=True, hide_index=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # 4. EXPANDABLE SUB-LEDGERS (Stocks/Shares, Quai, Other Client Accounts)
+        # --- LIFETIME ISA COMMENTARY BLOCK ---
+        with col_lisa:
+            st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title' style='color:#a78bfa;'>Lifetime ISA - Commentary on Variances</div></div>", unsafe_allow_html=True)
+            with st.form("lisa_comment_form", clear_on_submit=True):
+                # Οι ακριβείς τίτλοι από τη δεξιά πλευρά της εικόνας
+                lisa_account = st.selectbox("Select Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"], key="lisa_sel")
+                lisa_text = st.text_area("Variance Explanation / Treasury Action", placeholder="Type manual movement or commentary here...")
+                if st.form_submit_button("Post LISA Commentary"):
+                    if lisa_text:
+                        st.session_state.lisa_comments.append({"Account": lisa_account, "Commentary": lisa_text})
+                        st.toast("CASS LISA log updated!", icon="💜")
+                        
+            # Εσωτερικό Log εμφάνισης για το LISA
+            if st.session_state.lisa_comments:
+                st.markdown("<p style='font-size:12px; color:#8a8f98; margin-top:10px;'>Active Ledger Logs:</p>", unsafe_allow_html=True)
+                st.dataframe(pd.DataFrame(st.session_state.lisa_comments), use_container_width=True, hide_index=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        # 4. EXPANDABLE SUB-LEDGERS
         st.markdown("### 🔍 Secondary Portfolios & Trust Breakdowns")
         
         with st.expander("📊 Stocks / Shares ISA Ledger Breakdown"):
@@ -180,12 +195,6 @@ try:
                 <div class="recon-row"><span>Quai Segregated Pool Resource</span><span>£ {quai_data['Resource']:,.2f}</span></div>
                 <div class="recon-row total" style="color: #10b981;"><span>Calculated Residual Surplus</span><span>£ {quai_data['Shortfall / Surplus']:,.2f}</span></div>
             """, unsafe_allow_html=True)
-            
-        with st.expander("💶 Other Foreign Currency & Client Money Accounts"):
-            other_df = pd.DataFrame([
-                {"Bank": "Citi Bank NA London", "Account": "Saveable UK Client Money EUR (14747763)", "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": "Saveable Limited"}
-            ])
-            st.data_editor(other_df, column_config=currency_config, use_container_width=True, hide_index=True, key="other_accounts_grid")
 
         # 5. DAILY RECONCILIATION CALCULATION BLOCK
         st.markdown("<br>", unsafe_allow_html=True)
