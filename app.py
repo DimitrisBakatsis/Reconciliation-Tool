@@ -37,9 +37,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# 2. Φόρτωση του αρχείου Excel
 EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Template - (Daily Cash Rec).xlsx"
 
-@st.cache_data(ttl=2)
+# ΑΛΛΑΓΗ ΕΔΩ: st.cache_resource αντί για st.cache_data για να μην πετάει το serialization error
+@st.cache_resource(ttl=2)
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
