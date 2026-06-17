@@ -10,13 +10,29 @@ st.markdown("""
     .stApp { background-color: #0b0c10; color: #e5e7eb; font-family: 'Inter', sans-serif; }
     .main-header { font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; }
     .date-subheader { font-size: 13px; color: #9ca3af; margin-bottom: 25px; display: flex; align-items: center; gap: 6px; }
+    
+    /* Premium Top Metrics Grid */
+    .metric-grid { display: flex; gap: 16px; margin-bottom: 25px; flex-wrap: wrap; }
+    .metric-card { 
+        background-color: #0d0f16; 
+        border: 1px solid #1f2937; 
+        border-radius: 8px; 
+        padding: 20px; 
+        flex: 1; 
+        min-width: 220px; 
+    }
+    .metric-label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .metric-value { font-size: 22px; font-weight: 700; }
+    .metric-value.blue { color: #3b82f6; }
+    .metric-value.red { color: #ef4444; }
+    
     .workspace-card { background-color: #0d0f16; border: 1px solid #1f2937; border-radius: 8px; padding: 24px; margin-bottom: 20px; }
     .workspace-header { border-bottom: 1px solid #1f2937; padding-bottom: 14px; margin-bottom: 20px; }
     .workspace-title { font-size: 13px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; }
     .recon-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1f2937; font-size: 14px; color: #d1d5db; }
     .recon-row.total { border-bottom: none; font-weight: 700; font-size: 15px; color: #3b82f6; padding-top: 14px; }
     
-    /* Modern Log Entry Card Style */
+    /* Modern Log Entry Card Style (No Text Cutting) */
     .log-card { 
         background-color: #11141d; 
         border-left: 4px solid #a78bfa; 
@@ -26,11 +42,12 @@ st.markdown("""
         display: flex;
         justify-content: space-between;
         align-items: center;
+        width: 100%;
     }
-    .log-details { flex-grow: 1; }
-    .log-meta { font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
-    .log-text { font-size: 14px; color: #ffffff; font-weight: 500; }
-    .log-amount { font-size: 15px; font-weight: 700; color: #10b981; margin-right: 20px; }
+    .log-details { flex-grow: 1; padding-right: 15px; }
+    .log-meta { font-size: 12px; color: #9ca3af; margin-bottom: 4px; font-weight: 600; }
+    .log-text { font-size: 14px; color: #ffffff; font-weight: 500; word-break: break-word; }
+    .log-amount { font-size: 15px; font-weight: 700; color: #10b981; white-space: nowrap; margin-right: 20px; }
     
     /* Input Form Styles */
     div[data-testid="stSelectbox"] > label, div[data-testid="stNumberInput"] > label, div[data-testid="stTextInput"] > label {
@@ -124,15 +141,33 @@ try:
     # 🟢 TAB 2: DAILY CLIENT MONEY REPORT
     # ==========================================
     elif selected_tab == sheet_names[1]:
-        st.markdown("### Client Money Balances & Asset Ledger Suite")
         
-        # Live pre-population check
-        df_tab2_raw = pd.read_excel(EXCEL_FILE, sheet_name=1, header=None)
+        # 🔴 ΕΠΑΝΑΦΟΡΑ ΤΩΝ PREMIUM METRICS (ΚΟΚΚΙΝΑ/ΠΡΑΣΙΝΑ KPI CARDS)
+        st.markdown(f"""
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Requirement</div>
+                    <div class="metric-value blue">£ 2,601,370,286.70</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Resource</div>
+                    <div class="metric-value blue">£ 2,607,556,676.61</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Shortfall / Surplus</div>
+                    <div class="metric-value red">£ -1,244.09</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Net Change (COB)</div>
+                    <div class="metric-value blue">£ 3,246,757.00</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### Client Money Balances & Asset Ledger Suite")
         
         if "cisa_movements" not in st.session_state:
             st.session_state.cisa_movements = []
-            # Προσομοίωση ανάγνωσης από το Excel (αν υπάρχει κείμενο αντί N/A)
-            # Εδώ αντικαθιστούμε το hardcoded N/A με έλεγχο πραγματικού κελιού αν θες, π.χ. Treasury movement of 1,000,000 between Citibank and Lloyds EA
             parsed = parse_excel_comment("Citibank", "CISA treasury movement of 1,000,000 between Citibank and Lloyds EA")
             if parsed:
                 st.session_state.cisa_movements.append(parsed)
@@ -171,7 +206,7 @@ try:
         # --- CASH ISA TAB (FULL WIDTH) ---
         with audit_tab_cisa:
             st.markdown("<br>", unsafe_allow_html=True)
-            col_form, col_logs = st.columns([1, 2]) # 1 μέρος η φόρμα, 2 μέρη οι καταχωρήσεις (Full πλάτος)
+            col_form, col_logs = st.columns([1, 2])
             
             with col_form:
                 st.markdown("<p style='font-weight:700; color:#fff; font-size:14px; margin-bottom:15px;'>Log Manual Treasury Movement</p>", unsafe_allow_html=True)
@@ -191,7 +226,6 @@ try:
                 if not st.session_state.cisa_movements:
                     st.info("No active logs recorded for Cash ISA.")
                 else:
-                    # Εμφάνιση ως Premium Cards αντί για Excel Grid
                     for idx, entry in enumerate(st.session_state.cisa_movements):
                         st.markdown(f"""
                             <div class="log-card">
@@ -202,8 +236,7 @@ try:
                                 <div class="log-amount">{entry['Amount']}</div>
                             </div>
                         """, unsafe_allow_html=True)
-                        # Κουμπί διαγραφής ακριβώς από κάτω/δίπλα
-                        if st.button(f"🗑️ Remove Entry", key=f"del_cisa_{idx}"):
+                        if st.button(f"🗑Preserve / Remove Entry", key=f"del_cisa_{idx}"):
                             st.session_state.cisa_movements.pop(idx)
                             st.rerun()
 
@@ -243,6 +276,20 @@ try:
                         if st.button(f"🗑️ Remove Entry", key=f"del_lisa_{idx}"):
                             st.session_state.lisa_movements.pop(idx)
                             st.rerun()
+
+        # 🔴 ΕΠΑΝΑΦΟΡΑ ΤΩΝ REASONS / QUAI SURPLUS BOX
+        st.markdown("<br>### 📋 Internal Movements & Strategic Comments", unsafe_allow_html=True)
+        st.info("""
+        **CISA:** Overall Shortfall of £4,393.67  
+        * Amount of £4,393.67 residual interest paid to users as part of the transfer out process.  
+        * To be moved from CISA corporate interest to CM 17/06.  
+        
+        **LISA:** Overall Shortfall of £243.63  
+        * Amount of £243.63 residual interest paid to users as part of the transfer out process.  
+        * To be moved from LISA corporate interest to CM 17/06.  
+        
+        **Quai:** Overall Surplus of **£0.18** * Quai to arrange amount to written off 17/06.
+        """)
 
         # 4. EXPANDABLE SUB-LEDGERS
         st.markdown("<br>### 🔍 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
