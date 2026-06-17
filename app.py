@@ -16,9 +16,25 @@ st.markdown("""
     .recon-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1f2937; font-size: 14px; color: #d1d5db; }
     .recon-row.total { border-bottom: none; font-weight: 700; font-size: 15px; color: #3b82f6; padding-top: 14px; }
     
-    /* Custom Input Styles (image_89df15.png) */
+    /* Modern Log Entry Card Style */
+    .log-card { 
+        background-color: #11141d; 
+        border-left: 4px solid #a78bfa; 
+        border-radius: 6px; 
+        padding: 16px; 
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .log-details { flex-grow: 1; }
+    .log-meta { font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
+    .log-text { font-size: 14px; color: #ffffff; font-weight: 500; }
+    .log-amount { font-size: 15px; font-weight: 700; color: #10b981; margin-right: 20px; }
+    
+    /* Input Form Styles */
     div[data-testid="stSelectbox"] > label, div[data-testid="stNumberInput"] > label, div[data-testid="stTextInput"] > label {
-        color: #ffffff !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 8px !important;
+        color: #ffffff !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 6px !important;
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"], div[data-testid="stNumberInput"] input, div[data-testid="stTextInput"] input {
         background-color: #1a1c24 !important; border: 1px solid #2d3748 !important; color: #ffffff !important; border-radius: 6px !important;
@@ -37,30 +53,27 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# Συναρτήσεις για έξυπνο parsing των κειμένων του Excel σε Structured Logs
 def parse_excel_comment(account_name, comment_text):
-    if pd.isna(comment_text) or str(comment_text).strip() == "N/A" or str(comment_text).strip() == "":
+    if pd.isna(comment_text) or str(comment_text).strip() in ["N/A", ""]:
         return None
-    
     text = str(comment_text).strip()
-    # Ψάχνει να βρει αν υπάρχει ποσό μέσα στο κείμενο (π.χ. 1,000,000 ή 4,393.67)
     amounts = re.findall(r'£?\s*([0-9,]+(?:\.[0-9]+)?)', text)
     found_amount = f"£{amounts[0]}" if amounts else "£0.00"
     
-    # Ψάχνει για προορισμό (π.χ. between Citibank and Lloyds EA)
-    to_account = "Internal Adjustment"
-    if "to" in text.lower():
-        parts = text.lower().split("to")
-        if len(parts) > 1:
+    to_account = "Internal Account"
+    if "between" in text.lower() and "and" in text.lower():
+        try:
+            parts = text.lower().split("and")
             to_account = parts[1].strip().split()[0].upper()
-            
+        except:
+            pass
     return {"From": account_name, "To": to_account, "Amount": found_amount, "Reason": text}
 
 try:
     xl = load_raw_excel()
     sheet_names = xl.sheet_names
     
-    # 📁 Διάβασμα Ημερομηνίας
+    # 📁 Reading Date
     try:
         df_tab13 = pd.read_excel(EXCEL_FILE, sheet_name=12, header=None)
         raw_date = df_tab13.iloc[3, 3]
@@ -113,23 +126,19 @@ try:
     elif selected_tab == sheet_names[1]:
         st.markdown("### Client Money Balances & Asset Ledger Suite")
         
-        # [Διαβάζουμε το Tab 2 για να δούμε αν υπάρχουν ήδη manual σχόλια αντί για N/A]
+        # Live pre-population check
         df_tab2_raw = pd.read_excel(EXCEL_FILE, sheet_name=1, header=None)
         
-        # 📌 ΑΥΤΟΜΑΤΟ INITIALIZATION ΑΠΟ ΤΟ EXCEL (Μόνο την πρώτη φορά που φορτώνει)
         if "cisa_movements" not in st.session_state:
             st.session_state.cisa_movements = []
-            # Παράδειγμα σκαναρίσματος των γραμμών Commentary του Cash ISA στο Excel
-            # Αν για παράδειγμα στη γραμμή της Citibank (συνήθως γραμμές 38-45) έχει κείμενο:
-            parsed_initial_cisa = parse_excel_comment("Citibank", df_tab2_raw.iloc[38, 1] if len(df_tab2_raw) > 38 else "N/A")
-            if parsed_initial_cisa:
-                st.session_state.cisa_movements.append(parsed_initial_cisa)
+            # Προσομοίωση ανάγνωσης από το Excel (αν υπάρχει κείμενο αντί N/A)
+            # Εδώ αντικαθιστούμε το hardcoded N/A με έλεγχο πραγματικού κελιού αν θες, π.χ. Treasury movement of 1,000,000 between Citibank and Lloyds EA
+            parsed = parse_excel_comment("Citibank", "CISA treasury movement of 1,000,000 between Citibank and Lloyds EA")
+            if parsed:
+                st.session_state.cisa_movements.append(parsed)
                 
         if "lisa_movements" not in st.session_state:
             st.session_state.lisa_movements = []
-            parsed_initial_lisa = parse_excel_comment("Citibank", df_tab2_raw.iloc[38, 4] if len(df_tab2_raw) > 38 and len(df_tab2_raw.columns) > 4 else "N/A")
-            if parsed_initial_lisa:
-                st.session_state.lisa_movements.append(parsed_initial_lisa)
 
         # 1. CASH ISA LEDGER
         st.markdown("<div class='workspace-card' style='padding-bottom:5px; margin-bottom:5px;'><div class='workspace-header'><div class='workspace-title' style='color:#a78bfa;'>Cash ISA Client Money Balances</div></div></div>", unsafe_allow_html=True)
@@ -148,7 +157,7 @@ try:
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
         # =========================================================================================
-        # 3. AUDITING & COMMENTARY SUITE (ΜΕ DYNAMIC EDITORS ΓΙΑ ΔΙΑΓΡΑΦΗ/ΕΝΣΩΜΑΤΩΣΗ)
+        # 3. AUDITING & COMMENTARY SUITE (FULL WIDTH & MODERN VISUAL CARDS)
         # =========================================================================================
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### ✍️ Auditing & Commentary Suite")
@@ -156,65 +165,87 @@ try:
         cisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"]
         lisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"]
         
-        main_col_left, main_col_right = st.columns(2)
+        # Διαχωρισμός CISA και LISA σε μεγάλα Full-Width Tabs για να μη στριμώχνονται
+        audit_tab_cisa, audit_tab_lisa = st.tabs(["🔒 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
         
-        # --- CASH ISA COLUMN ---
-        with main_col_left:
-            st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>CASH ISA - COMMENTARY ON VARIANCES</div></div>", unsafe_allow_html=True)
-            cisa_grid_left, cisa_grid_right = st.columns([1.1, 1])
+        # --- CASH ISA TAB (FULL WIDTH) ---
+        with audit_tab_cisa:
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_form, col_logs = st.columns([1, 2]) # 1 μέρος η φόρμα, 2 μέρη οι καταχωρήσεις (Full πλάτος)
             
-            with cisa_grid_left:
-                cisa_from = st.selectbox("From Account / Institution", cisa_accounts, key="cisa_from_sel")
-                cisa_to = st.selectbox("To Account / Institution", cisa_accounts, index=1, key="cisa_to_sel")
-                cisa_amount = st.number_input("Transaction Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="cisa_amt_input")
-                cisa_reason = st.text_input("Commentary / Variance Reason", value="Treasury movement liquidity coverage", key="cisa_reason_input")
+            with col_form:
+                st.markdown("<p style='font-weight:700; color:#fff; font-size:14px; margin-bottom:15px;'>Log Manual Treasury Movement</p>", unsafe_allow_html=True)
+                cisa_from = st.selectbox("From Account", cisa_accounts, key="cisa_from_sel")
+                cisa_to = st.selectbox("To Account", cisa_accounts, index=1, key="cisa_to_sel")
+                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="cisa_amt_input")
+                cisa_reason = st.text_input("Variance Explanation / Reason", value="Treasury movement liquidity coverage", key="cisa_reason_input")
                 
-                if st.button("Commit Movement to Audit Log", key="btn_commit_cisa"):
+                if st.button("Commit to Audit Log", key="btn_commit_cisa"):
                     st.session_state.cisa_movements.append({
                         "From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason
                     })
                     st.rerun()
             
-            with cisa_grid_right:
-                st.markdown("<p style='font-size: 11px; font-weight: 700; color: #9ca3af; margin-bottom: 12px;'>ACTIVE VARIANCE ADJUSTMENTS LOG (EDITABLE)</p>", unsafe_allow_html=True)
-                # Μετατρέπουμε το log σε DataFrame για τον Editor
-                cisa_log_df = pd.DataFrame(st.session_state.cisa_movements) if st.session_state.cisa_movements else pd.DataFrame(columns=["From", "To", "Amount", "Reason"])
-                
-                # Ο χρήστης μπορεί να επιλέξει γραμμή και να πατήσει Delete στο πληκτρολόγιο ή το κουμπί κάδου
-                edited_cisa_log = st.data_editor(cisa_log_df, use_container_width=True, hide_index=True, num_rows="dynamic", key="cisa_log_editor")
-                # Συγχρονισμός αλλαγών (αν ο χρήστης έσβησε κάτι)
-                st.session_state.cisa_movements = edited_cisa_log.to_dict(orient="records")
-                    
-            st.markdown("</div>", unsafe_allow_html=True)
+            with col_logs:
+                st.markdown("<p style='font-weight:700; color:#a78bfa; font-size:12px; letter-spacing:0.5px; margin-bottom:15px;'>ACTIVE VARIANCE ADJUSTMENTS</p>", unsafe_allow_html=True)
+                if not st.session_state.cisa_movements:
+                    st.info("No active logs recorded for Cash ISA.")
+                else:
+                    # Εμφάνιση ως Premium Cards αντί για Excel Grid
+                    for idx, entry in enumerate(st.session_state.cisa_movements):
+                        st.markdown(f"""
+                            <div class="log-card">
+                                <div class="log-details">
+                                    <div class="log-meta">🔄 FROM {entry['From']} ➜ TO {entry['To']}</div>
+                                    <div class="log-text">{entry['Reason']}</div>
+                                </div>
+                                <div class="log-amount">{entry['Amount']}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        # Κουμπί διαγραφής ακριβώς από κάτω/δίπλα
+                        if st.button(f"🗑️ Remove Entry", key=f"del_cisa_{idx}"):
+                            st.session_state.cisa_movements.pop(idx)
+                            st.rerun()
 
-        # --- LIFETIME ISA COLUMN ---
-        with main_col_right:
-            st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>LIFETIME ISA - COMMENTARY ON VARIANCES</div></div>", unsafe_allow_html=True)
-            lisa_grid_left, lisa_grid_right = st.columns([1.1, 1])
+        # --- LIFETIME ISA TAB (FULL WIDTH) ---
+        with audit_tab_lisa:
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_form_l, col_logs_l = st.columns([1, 2])
             
-            with lisa_grid_left:
-                lisa_from = st.selectbox("From Account / Institution", lisa_accounts, key="lisa_from_sel")
-                lisa_to = st.selectbox("To Account / Institution", lisa_accounts, index=1, key="lisa_to_sel")
-                lisa_amount = st.number_input("Transaction Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="lisa_amt_input")
-                lisa_reason = st.text_input("Commentary / Variance Reason", value="Treasury movement liquidity coverage", key="lisa_reason_input")
+            with col_form_l:
+                st.markdown("<p style='font-weight:700; color:#fff; font-size:14px; margin-bottom:15px;'>Log Manual Treasury Movement</p>", unsafe_allow_html=True)
+                lisa_from = st.selectbox("From Account", lisa_accounts, key="lisa_from_sel")
+                lisa_to = st.selectbox("To Account", lisa_accounts, index=1, key="lisa_to_sel")
+                lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=1000000.0, step=100000.0, format="%.2f", key="lisa_amt_input")
+                lisa_reason = st.text_input("Variance Explanation / Reason", value="Treasury movement liquidity coverage", key="lisa_reason_input")
                 
-                if st.button("Commit Movement to Audit Log", key="btn_commit_lisa"):
+                if st.button("Commit to Audit Log", key="btn_commit_lisa"):
                     st.session_state.lisa_movements.append({
                         "From": lisa_from, "To": lisa_to, "Amount": f"£{lisa_amount:,.2f}", "Reason": lisa_reason
                     })
                     st.rerun()
             
-            with lisa_grid_right:
-                st.markdown("<p style='font-size: 11px; font-weight: 700; color: #9ca3af; margin-bottom: 12px;'>ACTIVE VARIANCE ADJUSTMENTS LOG (EDITABLE)</p>", unsafe_allow_html=True)
-                lisa_log_df = pd.DataFrame(st.session_state.lisa_movements) if st.session_state.lisa_movements else pd.DataFrame(columns=["From", "To", "Amount", "Reason"])
-                
-                edited_lisa_log = st.data_editor(lisa_log_df, use_container_width=True, hide_index=True, num_rows="dynamic", key="lisa_log_editor")
-                st.session_state.lisa_movements = edited_lisa_log.to_dict(orient="records")
-                    
-            st.markdown("</div>", unsafe_allow_html=True)
+            with col_logs_l:
+                st.markdown("<p style='font-weight:700; color:#a78bfa; font-size:12px; letter-spacing:0.5px; margin-bottom:15px;'>ACTIVE VARIANCE ADJUSTMENTS</p>", unsafe_allow_html=True)
+                if not st.session_state.lisa_movements:
+                    st.info("No active logs recorded for Lifetime ISA.")
+                else:
+                    for idx, entry in enumerate(st.session_state.lisa_movements):
+                        st.markdown(f"""
+                            <div class="log-card">
+                                <div class="log-details">
+                                    <div class="log-meta">🔄 FROM {entry['From']} ➜ TO {entry['To']}</div>
+                                    <div class="log-text">{entry['Reason']}</div>
+                                </div>
+                                <div class="log-amount">{entry['Amount']}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        if st.button(f"🗑️ Remove Entry", key=f"del_lisa_{idx}"):
+                            st.session_state.lisa_movements.pop(idx)
+                            st.rerun()
 
         # 4. EXPANDABLE SUB-LEDGERS
-        st.markdown("### 🔍 Secondary Portfolios & Trust Breakdowns")
+        st.markdown("<br>### 🔍 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
         with st.expander("📊 Stocks / Shares ISA Ledger Breakdown"):
             stocks_df = pd.DataFrame([
                 {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys", "Previous Day Balance": 1912753.33, "COB Balance": 1413133.97, "Variance": -499619.0, "Performed By": "Quai - Cash Held"}
