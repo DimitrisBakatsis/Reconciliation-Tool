@@ -72,24 +72,6 @@ st.markdown("""
     .reason-section { font-size: 13px; line-height: 1.6; color: #d1d5db; margin-bottom: 12px; }
     .reason-section strong { color: #ffffff; }
 
-    /* Custom CSS Aging Bars Layout - FIXED RIGHT ALIGNMENT */
-    .aging-bar-wrapper { margin-bottom: 15px; }
-    .aging-bar-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #d1d5db; width: 100%; }
-    
-    /* PDF Bottom Floating Container */
-    .pdf-container {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 30px;
-        margin-bottom: 10px;
-        padding-right: 5px;
-    }
-    
-    /* Sidebar Layout Fixes */
-    [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
-    .sidebar-custom-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; }
-    .sidebar-input-label { font-size: 14px; font-weight: 600; color: #ffffff; margin-top: 15px; margin-bottom: 10px; }
-    
     .stDataEditor { border-top: none !important; border-radius: 0 0 8px 8px !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -444,9 +426,9 @@ try:
             other_accounts_dynamic_df = pd.DataFrame([row_citi_eur, row_mmf1, row_mmf2])
             st.data_editor(other_accounts_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="other_client_money_live")
 
-    # =========================================================================================
-    # 📈 🔥 TAB 3: UNALLOC REC (PREMIUM ALIGNED PORTFOLIO RESUMED)
-    # =========================================================================================
+    # ==========================================
+    # 📈 TAB 3: UNALLOC REC (ΚΛΕΙΔΩΜΕΝΟ)
+    # ==========================================
     elif selected_tab == "3. Unalloc Rec":
         st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
         df_tab3 = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
@@ -474,18 +456,14 @@ try:
         st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📊 LIVE UNALLOCATED FUNDS PORTFOLIO EXPOSURE (DAYS AGED)</div></div>", unsafe_allow_html=True)
         col_bar_left, col_bar_right = st.columns(2)
         
-        # 👑 FIXED THE LOOK: Τα ονόματα αριστερά και τα ποσά ευθυγραμμίζονται δεξιά (image_492da3.png)
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
             st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {cisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["0-2"] / max(1.0, cisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {cisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["3-5"] / max(1.0, cisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {cisa_b["6-9"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["6-9"] / max(1.0, cisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {cisa_b["10+"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["10+"] / max(1.0, cisa_unalloc_tot)))
             
@@ -493,20 +471,17 @@ try:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Lifetime ISA Aging Distribution</p>", unsafe_allow_html=True)
             st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {lisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["0-2"] / max(1.0, lisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {lisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["3-5"] / max(1.0, lisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {lisa_b["6-9"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["6-9"] / max(1.0, lisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {lisa_b["10+"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["10+"] / max(1.0, lisa_unalloc_tot)))
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ==========================================
-    # 🏛️ TAB 4: CISA - CASS INTERNAL REC (ΚΛΕΙΔΩΜΕΝΟ)
-    # ==========================================
+    # =========================================================================================
+    # 🏛️ 🔥 TAB 4: CISA - CASS INTERNAL REC (FIXED INTEREST DUE & FINAL REQUIREMENT TARGET)
+    # =========================================================================================
     elif selected_tab == "4. CISA - CASS Internal Rec":
         df_tab4 = pd.read_excel(EXCEL_FILE, sheet_name="4. CISA - CASS Internal Rec", header=None)
         
@@ -514,17 +489,24 @@ try:
         shortfall_calculated  = parse_live_value(df_tab4, "Daily Surplus or Shortfall", 1, -4393.67)
         conclusion_excel_text = parse_dynamic_conclusion(df_tab4, row_shortfall_idx, default="Conclusion data not found.")
         
-        combined_user_balance = parse_live_value(df_tab4, "Combined User Balance", 1, 2384358224.61)
-        less_unallocated      = parse_live_value(df_tab4, "Less Unallocated", 1, -277834.89)
-        transfers_isa         = parse_live_value(df_tab4, "Transfers in from ISA providers", 1, 2001813.90)
-        individual_client_bal = parse_live_value(df_tab4, "Individual Client Balances", 1, 2386637873.40)
+        combined_user_balance = parse_live_value(df_tab4, "Combined User Balance", 1, 2387522999.00)
+        less_unallocated      = parse_live_value(df_tab4, "Less Unallocated", 1, -294085.70)
+        transfers_isa         = parse_live_value(df_tab4, "Transfers in from ISA providers", 1, 2958695.42)
+        individual_client_bal = parse_live_value(df_tab4, "Individual Client Balances", 1, 2390775780.00)
         temp_tx_funding       = parse_live_value(df_tab4, "Temporary Transaction Funding", 1, -81188.22)
-        subtotal_pre_interest = parse_live_value(df_tab4, "Sub-Total (pre-Interest)", 1, 2386360038.51)
-        final_client_money_req= parse_live_value(df_tab4, "Client money requirement", 1, 2386360038.51)
+        subtotal_pre_interest = parse_live_value(df_tab4, "Sub-Total (pre-Interest)", 1, 2390481694.00)
+        
+        # 🔴 ΔΙΟΡΘΩΣΗ: Live lookup του Interest Due από το κελί E35 (Σειρά 34, στήλη 4 στο DataFrame)
+        interest_due_raw = df_tab4.iloc[34, 4] if df_tab4.shape[0] > 34 and df_tab4.shape[1] > 4 else 0.0
+        interest_due = safe_float(interest_due_raw)
+        
+        # 🔴 Υπολογισμός τελικού αθροίσματος σύμφωνα με το Excel
+        final_client_money_req = subtotal_pre_interest + interest_due
 
         st.markdown("### 📊 Internal Client Money Reconciliation Suite (v4.1) - Cash ISA")
         st.caption("FCA Compliance Ledger Verification according to CASS 7.16.22 Rules.")
 
+        # --- 1. COMPLIANCE BANNER HEADER ---
         st.markdown(f"""
             <div class="reason-box">
                 <div class="reason-title" style="color: #ef4444; font-size: 15px;">⚠️ Active Regulatory Target Status</div>
@@ -535,6 +517,7 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
+        # --- 2. BREAKS & DISCREPANCIES MATRIX ---
         st.markdown('<div class="table-header-container"><div class="table-title">🚫 Dynamic Outstanding Breaks & Discrepancies Ledger</div></div>', unsafe_allow_html=True)
         row1 = extract_break_row_data(df_tab4, "User Credits/Surplus not applied to ledger")
         row2 = extract_break_row_data(df_tab4, "User Debits/Shortfall not applied to ledger")
@@ -543,6 +526,7 @@ try:
         premium_breaks_df = pd.DataFrame([row1, row2, row3, row4])
         st.data_editor(premium_breaks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="premium_breaks_table")
 
+        # --- 3. CLIENT MONEY REQUIREMENT CALCULATION ---
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="table-header-container"><div class="table-title">🏛️ CASS 7.16.22 Client Money Requirement Calculation Engine</div></div>', unsafe_allow_html=True)
         
@@ -570,6 +554,7 @@ try:
         st.markdown(f"""
             <div class="workspace-card" style="margin-top:20px;">
                 <div class="recon-row" style="font-size:15px;"><span>Sub-Total Requirement (pre-Interest)</span><strong>£ {subtotal_pre_interest:,.2f}</strong></div>
+                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual (Cell E35)</span><strong>£ {interest_due:,.2f}</strong></div>
                 <div class="recon-row total" style="font-size:18px; color:#10b981; border-top:2px solid #1f2937; padding-top:15px;">
                     <span>🏛️ Final Client Money Requirement Target</span><strong>£ {final_client_money_req:,.2f}</strong>
                 </div>
