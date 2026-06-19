@@ -135,6 +135,23 @@ def locate_row_index(df, keyword):
                 return r
     return None
 
+# 🛠️ PREMIUM DYNAMIC ROW PARSER FOR BREAKS
+def extract_break_row_data(df, search_keyword):
+    try:
+        for r in range(df.shape[0]):
+            for c in range(df.shape[1]):
+                if search_keyword.lower() in str(df.iloc[r, c]).lower():
+                    # Στοίχιση βάσει της δομής του Excel
+                    category = str(df.iloc[r, c]).strip()
+                    val = df.iloc[r, c + 1]
+                    numeric_val = float(val) if isinstance(val, (int, float)) and pd.notna(val) else 0.0
+                    tx = str(df.iloc[r, c + 2]).strip() if pd.notna(df.iloc[r, c + 2]) else "N/A"
+                    action = str(df.iloc[r, c + 3]).strip() if pd.notna(df.iloc[r, c + 3]) else "N/A"
+                    return {"Discrepancy Category": category, "Value / Discrepancy": numeric_val, "Key Transactions Source": tx, "Actions Planned / Taken": action}
+        return {"Discrepancy Category": search_keyword, "Value / Discrepancy": 0.0, "Key Transactions Source": "N/A", "Actions Planned / Taken": "N/A"}
+    except:
+        return {"Discrepancy Category": search_keyword, "Value / Discrepancy": 0.0, "Key Transactions Source": "N/A", "Actions Planned / Taken": "N/A"}
+
 try:
     xl = load_raw_excel()
     full_menu_options = [
@@ -288,7 +305,7 @@ try:
         st.markdown("</div>", unsafe_allow_html=True)
 
     # =========================================================================================
-    # 🏛️ 🚀 TAB 4: CISA - CASS INTERNAL REC (PREMIUM & CLEAN BREAKS MATRIX)
+    # 🏛️ 🚀 TAB 4: CISA - CASS INTERNAL REC (100% PREMIUM & LIVE DYNAMIC TABLE)
     # =========================================================================================
     elif selected_tab == "4. CISA - CASS Internal Rec":
         df_tab4 = pd.read_excel(EXCEL_FILE, sheet_name="4. CISA - CASS Internal Rec", header=None)
@@ -319,22 +336,19 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # --- 2. BREAKS & DISCREPANCIES MATRIX (PREMIUM DESIGN & FILTERED ROWS) ---
+        # --- 2. BREAKS & DISCREPANCIES MATRIX (PREMIUM FILTERED & DYNAMIC) ---
         st.markdown('<div class="table-header-container"><div class="table-title">🚫 Outstanding Discrepancies & Active Breaks Grid</div></div>', unsafe_allow_html=True)
         
-        # 🛠️ ΔΙΟΡΘΩΣΗ: Φιλτράρισμα και οργάνωση του πίνακα των Breaks για να φαίνεται Premium (Όχι σαν ωμό Excel)
-        breaks_start_idx = locate_row_index(df_tab4, "Breaks")
-        if breaks_start_idx:
-            # Τραβάμε live μόνο τις 4 συγκεκριμένες γραμμές των Breaks, αγνοώντας τις 2 τελευταίες
-            raw_breaks_slice = df_tab4.iloc[breaks_start_idx+1 : breaks_start_idx+5]
-            
-            premium_breaks_df = pd.DataFrame({
-                "Discrepancy Category": raw_breaks_slice[3].astype(str).tolist(),
-                "Value / Discrepancy": [float(x) if isinstance(x, (int, float)) else 0.0 for x in raw_breaks_slice[4].tolist()],
-                "Key Transactions Source": raw_breaks_slice[5].fillna("N/A").astype(str).tolist(),
-                "Actions Planned / Taken": raw_breaks_slice[6].fillna("N/A").astype(str).tolist()
-            })
-            st.data_editor(premium_breaks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="premium_breaks_table")
+        # 🛠️ ΔΙΟΡΘΩΣΗ: Ψάχνει live τις 4 συγκεκριμένες γραμμές των breaks, αποκλείοντας τις 2 τελευταίες γραμμές και το header "Discrepancies"
+        row1 = extract_break_row_data(df_tab4, "User Credits/Surplus not applied to ledger")
+        row2 = extract_break_row_data(df_tab4, "User Debits/Shortfall not applied to ledger")
+        row3 = extract_break_row_data(df_tab4, "Bulk Ledger Credits/Surplus not applied to users")
+        row4 = extract_break_row_data(df_tab4, "Bulk Ledger Debits/Shortfall not applied to users")
+        
+        premium_breaks_df = pd.DataFrame([row1, row2, row3, row4])
+        
+        # Εμφάνιση με το premium Streamlit data editor με format λιρών
+        st.data_editor(premium_breaks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="premium_breaks_table")
 
         # --- 3. CLIENT MONEY REQUIREMENT CALCULATION ---
         st.markdown("<br>", unsafe_allow_html=True)
