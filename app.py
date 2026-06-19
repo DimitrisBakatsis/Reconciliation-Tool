@@ -62,7 +62,7 @@ st.markdown("""
     /* Strategic Reason / Conclusion Box look */
     .reason-box {
         background-color: #1a1c24;
-        border-left: 4px solid #ef4444;
+        border-left: 4px solid #3b82f6;
         padding: 20px;
         border-radius: 6px;
         margin-top: 10px;
@@ -239,9 +239,9 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-    # ==========================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
-    # ==========================================
+    # =========================================================================================
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (PREMIUM LAYOUT RESTORED & DYNAMIC)
+    # =========================================================================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
         
@@ -250,6 +250,10 @@ try:
         sh_val  = parse_live_value(df_tab2, "Shortfall / Surplus", 1, -4636.94)
         net_isa = parse_live_value(df_tab2, "Net ISA Change", 1, -361295.03)
 
+        cisa_net_change = parse_live_value(df_tab2, "CISA Net Change", 1, -971704.00)
+        lisa_net_change = parse_live_value(df_tab2, "LISA Net Change", 1, 610408.97)
+
+        # 1. Premium KPI Cards
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">Total Requirement</div><div class="metric-value blue">£ {req_val:,.2f}</div></div>
@@ -260,27 +264,65 @@ try:
         """, unsafe_allow_html=True)
         
         st.markdown("### Client Money Balances & Asset Ledger Suite")
-        st.markdown('<div class="table-header-container"><div class="table-title">Live Bank Ledger Matrix Stream</div></div>', unsafe_allow_html=True)
-        df_tab2_clean = df_tab2.dropna(how="all").dropna(axis=1, how="all").fillna("")
-        st.dataframe(df_tab2_clean.iloc[2:35].astype(str), use_container_width=True, hide_index=True)
 
-    # =========================================================================================
-    # 📈 🔥 TAB 3: UNALLOC REC (PREMIUM AGING PROGRESS BARS - 100% ΔΥΝΑΜΙΚΟ LOOKUP ΑΠΟ ΤΟ TAB 3)
-    # =========================================================================================
+        # Cash ISA Table
+        st.markdown(f"""
+            <div class="table-header-container">
+                <div class="table-title">Cash ISA Client Money Balances - GBP</div>
+                <div class="net-change-badge red">CISA Net Change: £ {cisa_net_change:,.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        cash_isa_df = pd.DataFrame([
+            {"Bank": "Citi Bank NA London", "Account": "Saveable Cash ISA UK Client Money (14747801)", "Previous Day Balance": parse_live_value(df_tab2, "14747801", -1), "COB Balance": parse_live_value(df_tab2, "14747801", 0), "Variance": parse_live_value(df_tab2, "14747801", 1), "Entity": "Saveable Limited"},
+            {"Bank": "Lloyds Bank Plc", "Account": "Saveable Cash ISA Client Account (27551460)", "Previous Day Balance": parse_live_value(df_tab2, "27551460", -1), "COB Balance": parse_live_value(df_tab2, "27551460", 0), "Variance": parse_live_value(df_tab2, "27551460", 1), "Entity": "Saveable Limited"},
+            {"Bank": "Lloyds Bank Plc", "Account": "Saveable Cash ISA 30D Notice Client Account (27571468)", "Previous Day Balance": parse_live_value(df_tab2, "27571468", -1), "COB Balance": parse_live_value(df_tab2, "27571468", 0), "Variance": parse_live_value(df_tab2, "27571468", 1), "Entity": "Saveable Limited"},
+            {"Bank": "QNB", "Account": "Qatar National Bank (4311-000545-310)", "Previous Day Balance": parse_live_value(df_tab2, "4311-000545-310", -1), "COB Balance": parse_live_value(df_tab2, "4311-000545-310", 0), "Variance": parse_live_value(df_tab2, "4311-000545-310", 1), "Entity": "Saveable Limited"},
+            {"Bank": "BBVA", "Account": "BBVA Easy access (01778650)", "Previous Day Balance": parse_live_value(df_tab2, "01778650", -1), "COB Balance": parse_live_value(df_tab2, "01778650", 0), "Variance": parse_live_value(df_tab2, "01778650", 1), "Entity": "Saveable Limited"}
+        ])
+        st.data_editor(cash_isa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="cash_isa_grid")
+        
+        # Lifetime ISA Table
+        st.markdown(f"""
+            <div class="table-header-container">
+                <div class="table-title">Lifetime ISA Client Money Balances - GBP</div>
+                <div class="net-change-badge green">LISA Net Change: +£ {lisa_net_change:,.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        lisa_df = pd.DataFrame([
+            {"Bank": "CitiBank NA London", "Account": "Saveable Lifetime ISA UK Client Money (15242487)", "Previous Day Balance": parse_live_value(df_tab2, "15242487", -1), "COB Balance": parse_live_value(df_tab2, "15242487", 0), "Variance": parse_live_value(df_tab2, "15242487", 1), "Entity": "Saveable Limited"},
+            {"Bank": "Lloyds Bank Plc", "Account": "Saveable Lifetime ISA Client Account (27561260)", "Previous Day Balance": parse_live_value(df_tab2, "27561260", -1), "COB Balance": parse_live_value(df_tab2, "27561260", 0), "Variance": parse_live_value(df_tab2, "27561260", 1), "Entity": "Saveable Limited"},
+            {"Bank": "Lloyds Bank Plc", "Account": "Saveable Lifetime ISA 30D Notice Client Account (27571060)", "Previous Day Balance": parse_live_value(df_tab2, "27571060", -1), "COB Balance": parse_live_value(df_tab2, "27571060", 0), "Variance": parse_live_value(df_tab2, "27571060", 1), "Entity": "Saveable Limited"},
+            {"Bank": "QNB", "Account": "Qatar National Bank (4311-000545-311)", "Previous Day Balance": parse_live_value(df_tab2, "4311-000545-311", -1), "COB Balance": parse_live_value(df_tab2, "4311-000545-311", 0), "Variance": parse_live_value(df_tab2, "4311-000545-311", 1), "Entity": "Saveable Limited"}
+        ])
+        st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
+
+        # 📋 Grey Summary Box (Live Comments)
+        cisa_comment = parse_live_value(df_tab2, "CISA: Overall", 0, "Commentary stream pending updates in source document.")
+        lisa_comment = parse_live_value(df_tab2, "LISA: Overall", 0, "Commentary stream pending updates in source document.")
+        
+        st.markdown(f"""
+            <div class="reason-box">
+                <div class="reason-title">📋 Reason for internal movements & Commentary</div>
+                <div class="reason-section"><strong>Cash ISA Portfolio</strong><br>• {cisa_comment}</div>
+                <div class="reason-section" style="margin-bottom: 0;"><strong>Lifetime ISA Portfolio</strong><br>• {lisa_comment}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # ==========================================
+    # 📈 TAB 3: UNALLOC REC
+    # ==========================================
     elif selected_tab == "3. Unalloc Rec":
         st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
+        df_tab3 = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
         
-        # Διαβάζουμε live το Worksheet του Tab 3
-        df_tab3_unalloc = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
-        
-        # 🛠️ LIVE KEYWORD LOOKUP: Ψάχνει live τις τιμές στον πίνακα χωρίς να μηδενίζει
-        cisa_unalloc_tot = parse_live_value(df_tab3_unalloc, "CISA total unallocated", 1, 294085.70)
-        lisa_unalloc_tot = parse_live_value(df_tab3_unalloc, "LISA total unallocated", 1, 163659.42)
-        
-        bucket_0_2 = parse_live_value(df_tab3_unalloc, "0-2 days", 1, 350308.39)
-        bucket_3_5 = parse_live_value(df_tab3_unalloc, "3-5 days", 1, 77906.50)
-        bucket_6_9 = parse_live_value(df_tab3_unalloc, "6-9 days", 1, 26046.54)
-        bucket_10p = parse_live_value(df_tab3_unalloc, "10+ days", 1, 3483.69)
+        cisa_unalloc_tot = parse_live_value(df_tab3, "CISA total unallocated", 1, 294085.70)
+        lisa_unalloc_tot = parse_live_value(df_tab3, "LISA total unallocated", 1, 163659.42)
+        bucket_0_2 = parse_live_value(df_tab3, "0-2 days", 1, 350308.39)
+        bucket_3_5 = parse_live_value(df_tab3, "3-5 days", 1, 77906.50)
+        bucket_6_9 = parse_live_value(df_tab3, "6-9 days", 1, 26046.54)
+        bucket_10p = parse_live_value(df_tab3, "10+ days", 1, 3483.69)
 
         st.markdown(f"""
             <div class="metric-grid">
@@ -293,8 +335,6 @@ try:
 
         st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📊 Live Unallocated Funds Portfolio Exposure (Days Aged)</div></div>", unsafe_allow_html=True)
         col_bar_left, col_bar_right = st.columns(2)
-        
-        # Εμφάνιση όλων των κατηγοριών (0-2, 3-5, 6-9, 10+) live και για τα δύο ISA χρωματισμένα premium
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
             st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {bucket_0_2:,.2f}</span></div></div>', unsafe_allow_html=True)
@@ -378,7 +418,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card" style="margin-bottom:0;">
                     <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments</div></div>
-                    <div class="recon-row"><span>Unallocated Balances Pool</span>mathbf{{£ {less_unallocated:,.2f}}}</div>
+                    <div class="recon-row"><span>Unallocated Balances Pool</span><strong>£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">£ {temp_tx_funding:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding:,.2f}</strong></div>
                 </div>
