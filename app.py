@@ -147,8 +147,9 @@ try:
         "15. Reconciliation actions (aut"
     ]
     
-    excluded_yellow_sheets = ["Unalloc_Data", "CISA Funding", "LISA Funding", "CISA Breaks", "LISA Breaks"]
-    filtered_menu = [item for item in full_menu_options if item not in excluded_yellow_sheets]
+    # 🔴 ΦΙΛΤΡΑΡΙΣΜΑ: Αποκλείουμε τα 5 κίτρινα ΚΑΙ το Tab 15 πλέον
+    excluded_sheets = ["Unalloc_Data", "CISA Funding", "LISA Funding", "CISA Breaks", "LISA Breaks", "15. Reconciliation actions (aut"]
+    filtered_menu = [item for item in full_menu_options if item not in excluded_sheets]
     
     formatted_date = "16/06/2026"
 
@@ -291,14 +292,19 @@ try:
                             st.session_state.lisa_movements.pop(idx)
                             st.rerun()
 
+        # Expandable Sub-Ledgers
+        st.markdown("<br>### 🔍 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
+        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown"):
+            stocks_df = pd.DataFrame([{"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys", "Previous Day Balance": 1912753.33, "COB Balance": 1413133.97, "Variance": -499619.0, "Performed By": "Quai - Cash Held"}])
+            st.data_editor(stocks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_grid")
+
     # ==========================================
-    # 📈 🔥 NEW PREMIUM VIEW: 3. UNALLOC REC
+    # 📈 VIEW: 3. UNALLOC REC
     # ==========================================
     elif selected_tab == "3. Unalloc Rec":
         st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
         st.caption("Transactions temporarily held in Unallocated Trust Accounts. CASS rule: Must be allocated inside 10 business days.")
         
-        # --- 1. ENTERPRISE LOOK METRIC CARDS ---
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">CISA Total Unallocated</div><div class="metric-value green">£ 277,834.89</div></div>
@@ -308,72 +314,44 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # --- 2. PREMIUM VISUAL AGING BARS (ΟΠΩΣ ΣΤΑ ΜΕΓΑΛΑ RECON TOOLS) ---
         st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📊 Unallocated Funds Portfolio Exposure (Days Aged)</div></div>", unsafe_allow_html=True)
-        
         col_bar_left, col_bar_right = st.columns(2)
         
-        # Υπολογισμός ποσοστών βάσει των αξιών του Excel: 0-2 d: 128572.33, 3-5 d: 197710.66, 6-9 d: 74214.66, 10+ d: 3483.69
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
-            # 0-2 Days (Πράσινο)
             st.markdown('<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ 128,572.33 (46.2%)</span></div></div>', unsafe_allow_html=True)
             st.progress(0.46)
-            # 3-5 Days (Κίτρινο)
             st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Workload)</span><span>£ 110,344.00 (39.7%)</span></div></div>', unsafe_allow_html=True)
             st.progress(0.39)
-            # 6-9 Days (Πορτοκαλί)
             st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ 38,918.56 (14.0%)</span></div></div>', unsafe_allow_html=True)
             st.progress(0.14)
-            # 10+ Days (Κόκκινο Breach)
             st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ 0.00 (0.0%)</span></div></div>', unsafe_allow_html=True)
             st.progress(0.0)
 
         with col_bar_right:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Lifetime ISA Aging Distribution</p>", unsafe_allow_html=True)
-            # 0-2 Days (Πράσινο)
             st.markdown('<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ 0.00 (0.0%)</span></div></div>', unsafe_allow_html=True)
             st.progress(0.0)
-            # 3-5 Days (Κίτρινο)
             st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Workload)</span><span>£ 87,366.66 (69.2%)</span></div></div>', unsafe_allow_html=True)
             st.progress(0.69)
-            # 6-9 Days (Πορτοκαλί)
             st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ 35,296.10 (28.0%)</span></div></div>', unsafe_allow_html=True)
             st.progress(0.28)
-            # 10+ Days (Κόκκινο Breach)
             st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ 3,483.69 (2.8%)</span></div></div>', unsafe_allow_html=True)
             st.progress(0.02)
-            
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # --- 3. STRUCTURED DATA TABLES WITH AGING BADGES ---
-        # CISA Table
         st.markdown('<div class="table-header-container"><div class="table-title">CISA Unallocated Breakdown (Looker Live Sync)</div><div class="net-change-badge green">Looker Match: £277,834.89</div></div>', unsafe_allow_html=True)
         cisa_unalloc_df = pd.DataFrame([
             {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019eb1df-f256...", "Date Created": "10/06/2026", "Type": "credit", "Amount": 29997.68, "Product": "cash_isa", "Provider ID": "e3a88178-e782...", "Days Aged": 7, "Breach Notes": "N/A"},
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ebb89-c0a2...", "Date Created": "11/06/2026", "Type": "credit", "Amount": 18184.43, "Product": "cash_isa", "Provider ID": "8a36818d-cb4b...", "Days Aged": 6, "Breach Notes": "N/A"},
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ecb84-c843...", "Date Created": "15/06/2026", "Type": "credit", "Amount": 64323.37, "Product": "cash_isa", "Provider ID": "7937e99a-a2d9...", "Days Aged": 4, "Breach Notes": "N/A"},
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ed024-854b...", "Date Created": "16/06/2026", "Type": "credit", "Amount": 21471.6, "Product": "cash_isa", "Provider ID": "228cd2f5-1ee0...", "Days Aged": 3, "Breach Notes": "N/A"},
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ed024-873d...", "Date Created": "16/06/2026", "Type": "credit", "Amount": 20918.18, "Product": "cash_isa", "Provider ID": "a7a2dae7-bd10...", "Days Aged": 3, "Breach Notes": "N/A"}
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ebb89-c0a2...", "Date Created": "11/06/2026", "Type": "credit", "Amount": 18184.43, "Product": "cash_isa", "Provider ID": "8a36818d-cb4b...", "Days Aged": 6, "Breach Notes": "N/A"}
         ])
-        st.data_editor(cisa_unalloc_df, column_config={
-            "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
-            "Days Aged": st.column_config.NumberColumn("Days Aged", help="CASS limit: 10 days max")
-        }, use_container_width=True, hide_index=True, key="cisa_unalloc_editor")
+        st.data_editor(cisa_unalloc_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="cisa_unalloc_editor")
 
-        # LISA Table
         st.markdown('<div class="table-header-container" style="margin-top:25px;"><div class="table-title">LISA Unallocated Breakdown (Looker Live Sync)</div><div class="net-change-badge red">Looker Match: £126,146.45</div></div>', unsafe_allow_html=True)
         lisa_unalloc_df = pd.DataFrame([
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "0199818b-0e35...", "Date Created": "25/09/2025", "Type": "credit", "Amount": 25.82, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 191, "Breach Notes": "Breach raised 09/10"},
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019a285f-0027...", "Date Created": "27/10/2025", "Type": "credit", "Amount": 39.36, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 169, "Breach Notes": "Breach raised 09/10"},
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019cc022-3aa7...", "Date Created": "28/01/2026", "Type": "credit", "Amount": 1250.50, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 102, "Breach Notes": "Breach raised 09/10"},
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019e9e8e-9ac8...", "Date Created": "27/02/2026", "Type": "credit", "Amount": 2168.01, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 80, "Breach Notes": "Breach raised 09/10"},
-            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ead2b-a847...", "Date Created": "09/06/2026", "Type": "credit", "Amount": 28032.55, "Product": "lisa", "Provider ID": "ffe80a3e-ca2c...", "Days Aged": 8, "Breach Notes": "N/A"}
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "0199818b-0e35...", "Date Created": "25/09/2025", "Type": "credit", "Amount": 25.82, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 191, "Breach Notes": "Breach raised 09/10"}
         ])
-        st.data_editor(lisa_unalloc_df, column_config={
-            "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
-            "Days Aged": st.column_config.NumberColumn("Days Aged", help="CASS limit: 10 days max")
-        }, use_container_width=True, hide_index=True, key="lisa_unalloc_editor")
+        st.data_editor(lisa_unalloc_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="lisa_unalloc_editor")
 
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
