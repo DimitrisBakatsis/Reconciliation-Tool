@@ -72,24 +72,6 @@ st.markdown("""
     .reason-section { font-size: 13px; line-height: 1.6; color: #d1d5db; margin-bottom: 12px; }
     .reason-section strong { color: #ffffff; }
 
-    /* Custom CSS Aging Bars Layout */
-    .aging-bar-wrapper { margin-bottom: 15px; }
-    .aging-bar-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #d1d5db; }
-    
-    /* PDF Bottom Floating Container */
-    .pdf-container {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 30px;
-        margin-bottom: 10px;
-        padding-right: 5px;
-    }
-    
-    /* Sidebar Layout Fixes */
-    [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
-    .sidebar-custom-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; }
-    .sidebar-input-label { font-size: 14px; font-weight: 600; color: #ffffff; margin-top: 15px; margin-bottom: 10px; }
-    
     .stDataEditor { border-top: none !important; border-radius: 0 0 8px 8px !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -103,16 +85,16 @@ def load_raw_excel():
 # 🛠️ LIVE CELL PARSER & CLEANER
 def safe_float(val):
     if pd.isna(val):
-        return 0.0
+        return None
     if isinstance(val, (int, float)):
         return float(val)
     try:
         clean_str = str(val).replace("£", "").replace(",", "").replace("Units", "").strip()
         if clean_str == "" or clean_str.lower() == "n/a":
-            return 0.0
+            return None
         return float(clean_str)
     except:
-        return 0.0
+        return None
 
 def parse_live_value(df, keyword, offset_col=1, default=0.0):
     try:
@@ -121,7 +103,8 @@ def parse_live_value(df, keyword, offset_col=1, default=0.0):
                 cell_str = str(df.iloc[r, c]).strip().lower()
                 if keyword.lower() in cell_str:
                     val = df.iloc[r, c + offset_col]
-                    return safe_float(val)
+                    parsed = safe_float(val)
+                    return parsed if parsed is not None else default
         return default
     except:
         return default
@@ -168,7 +151,7 @@ def extract_break_row_data(df, search_keyword):
                 if search_keyword.lower() in str(df.iloc[r, c]).lower():
                     category = str(df.iloc[r, c]).strip()
                     val = df.iloc[r, c + 1]
-                    numeric_val = safe_float(val)
+                    numeric_val = safe_float(val) if safe_float(val) is not None else 0.0
                     tx = str(df.iloc[r, c + 2]).strip() if pd.notna(df.iloc[r, c + 2]) else "N/A"
                     action = str(df.iloc[r, c + 3]).strip() if pd.notna(df.iloc[r, c + 3]) else "N/A"
                     return {"Discrepancy Category": category, "Value / Discrepancy": numeric_val, "Key Transactions Source": tx, "Actions Planned / Taken": action}
@@ -195,7 +178,7 @@ def compute_unalloc_aging_buckets(df):
             if pd.isna(val_m) or str(val_m).strip().lower() in ["", "n/a", "diff", "sum"]:
                 continue
                 
-            amt = safe_float(val_m)
+            amt = safe_float(val_m) if safe_float(val_m) is not None else 0.0
             if amt == 0.0:
                 continue
                 
@@ -217,7 +200,7 @@ def compute_unalloc_aging_buckets(df):
             
     return cisa_buckets, lisa_buckets
 
-# 🛠️ 100% ΔΥΝΑΜΙΚΟΣ ΥΠΟΛΟΓΙΣΜΟΣ VARIANCE (COB - PREVIOUS DAY)
+# 🛠️ ΔΥΝΑΜΙΚΟΣ ΥΠΟΛΟΓΙΣΜΟΣ VARIANCE & COB ΜΕ ΦΙΛΤΡΟ ΓΙΑ ΜΗΔΕΝΙΚΑ (TAB 2)
 def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, performed_by="Quai - Cash Held"):
     try:
         for r in range(df.shape[0]):
@@ -230,17 +213,22 @@ def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, perf
                         numeric_cells.append(float(cell_val))
                     elif pd.notna(cell_val) and any(char.isdigit() for char in str(cell_val)) and not ("147" in str(cell_val) or "903" in str(cell_val)):
                         val_cleaned = safe_float(cell_val)
-                        numeric_cells.append(val_cleaned)
+                        if val_cleaned is not None:
+                            numeric_cells.append(val_cleaned)
                 
                 prev_day = numeric_cells[0] if len(numeric_cells) > 0 else 0.0
-                cob_bal  = numeric_cells[1] if len(numeric_cells) > 1 else 0.0
+                # Αν το Excel είναι άδειο, το COB μπαίνει 0.0
+                cob_bal = numeric_cells[1] if len(numeric_cells) > 1 else 0.0
+                
+                # 🔴 ΔΙΟΡΘΩΣΗ: Αν το COB είναι 0.0 (άδειο), το Variance βγαίνει 0.0 αντί για αρνητικό
+                variance = (cob_bal - prev_day) if cob_bal != 0.0 else 0.0
                 
                 return {
                     "Bank": bank_name,
                     "Account": row_keyword,
                     "Previous Day Balance": prev_day,
                     "COB Balance": cob_bal,
-                    "Variance": cob_bal - prev_day,
+                    "Variance": variance,
                     "Entity": entity_name,
                     "Performed By": performed_by
                 }
@@ -454,7 +442,6 @@ try:
             st.data_editor(stocks_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger_live")
 
         with st.expander("🔑 Other Client Money Accounts & QMMF Liquid Reserves", expanded=True):
-            # 🔴 LIVE CELLS K66-K68 TARGET LOOKUP ENGINE
             quai_req = df_tab2.iloc[65, 10] if df_tab2.shape[0] > 65 and df_tab2.shape[1] > 10 else 3532196.96
             quai_res = df_tab2.iloc[66, 10] if df_tab2.shape[0] > 66 and df_tab2.shape[1] > 10 else 3532197.14
             quai_req = safe_float(quai_req)
@@ -540,7 +527,7 @@ try:
         shortfall_calculated  = parse_live_value(df_tab4, "Daily Surplus or Shortfall", 1, -4393.67)
         conclusion_excel_text = parse_dynamic_conclusion(df_tab4, row_shortfall_idx, default="Conclusion data not found.")
         
-        combined_user_balance = parse_live_value(df_tab4, "Combined User Balance", 1, 2384358224.61)
+        combined_user_balance = parse_live_value(df_tab4, "Combined User Balance", 1, 234358224.61)
         less_unallocated      = parse_live_value(df_tab4, "Less Unallocated", 1, -277834.89)
         transfers_isa         = parse_live_value(df_tab4, "Transfers in from ISA providers", 1, 2001813.90)
         individual_client_bal = parse_live_value(df_tab4, "Individual Client Balances", 1, 2386637873.40)
