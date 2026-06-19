@@ -100,7 +100,7 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# 🛠️ LIVE CELL PARSER
+# 🛠️ LIVE CELL PARSER ΜΕ ΑΣΦΑΛΗ ΜΕΤΑΤΡΟΠΗ ΣΕ FLOAT
 def parse_live_value(df, keyword, offset_col=1, default=0.0):
     try:
         for r in range(df.shape[0]):
@@ -109,7 +109,24 @@ def parse_live_value(df, keyword, offset_col=1, default=0.0):
                 if keyword.lower() in cell_str:
                     val = df.iloc[r, c + offset_col]
                     if pd.notna(val) and val != "N/A":
-                        return float(val) if isinstance(val, (int, float)) else str(val).strip()
+                        # Καθαρισμός αν είναι string με σύμβολα λιρών ή κόμματα
+                        if isinstance(val, str):
+                            clean_str = val.replace("£", "").replace(",", "").strip()
+                            return float(clean_str)
+                        return float(val)
+        return default
+    except:
+        return default
+
+# 🛠️ LIVE STRING PARSER (Για κείμενα)
+def parse_live_string(df, keyword, offset_col=1, default=""):
+    try:
+        for r in range(df.shape[0]):
+            for c in range(df.shape[1]):
+                cell_str = str(df.iloc[r, c]).strip().lower()
+                if keyword.lower() in cell_str:
+                    val = df.iloc[r, c + offset_col]
+                    return str(val).strip() if pd.notna(val) else default
         return default
     except:
         return default
@@ -143,7 +160,9 @@ def extract_break_row_data(df, search_keyword):
                 if search_keyword.lower() in str(df.iloc[r, c]).lower():
                     category = str(df.iloc[r, c]).strip()
                     val = df.iloc[r, c + 1]
-                    numeric_val = float(val) if isinstance(val, (int, float)) and pd.notna(val) else 0.0
+                    if isinstance(val, str):
+                        val = float(val.replace("£", "").replace(",", "").strip())
+                    numeric_val = float(val) if pd.notna(val) else 0.0
                     tx = str(df.iloc[r, c + 2]).strip() if pd.notna(df.iloc[r, c + 2]) else "N/A"
                     action = str(df.iloc[r, c + 3]).strip() if pd.notna(df.iloc[r, c + 3]) else "N/A"
                     return {"Discrepancy Category": category, "Value / Discrepancy": numeric_val, "Key Transactions Source": tx, "Actions Planned / Taken": action}
@@ -173,8 +192,9 @@ try:
     selected_tab = st.sidebar.radio("Worksheet Selector", filtered_menu, label_visibility="collapsed")
 
     # Φόρτωση live ημερομηνίας
-    df_date_lookup = pd.read_excel(EXCEL_FILE, sheet_name=0, header=None)
-    formatted_date = str(parse_live_value(df_date_lookup, "Date:", 1, "18/06/2026")).split()[0]
+    df_date_sheet = pd.read_excel(EXCEL_FILE, sheet_name=0, header=None)
+    date_raw_val = df_date_sheet.iloc[2, 5] if df_date_sheet.shape[1] > 5 else "16/06/2026"
+    formatted_date = str(date_raw_val).split()[0]
 
     # --- MAIN GLOBAL HEADER ---
     st.markdown("<div class='main-header'>CASS Reconciliation & Daily Client Money Reporting</div>", unsafe_allow_html=True)
@@ -190,7 +210,7 @@ try:
     }
 
     # ==========================================
-    # 👑 TAB 1: SIGN OFF & OTHER CHECKS (IMAGE_499E28.PNG RESTORED)
+    # 👑 TAB 1: SIGN OFF & OTHER CHECKS (IMAGE_499E28.PNG FIXED)
     # ==========================================
     if selected_tab == "1. Sign Off & Other Checks":
         st.markdown("### Manual Combined User Balance Suite")
@@ -215,12 +235,12 @@ try:
         with col1:
             st.markdown(f"""
                 <div class="workspace-card">
-                    <div class="workspace-header"><div class="workspace-title" style="color: #a78bfa;">COMBINED USER BALANCE CHECK - CISA</div></div>
+                    <div class="workspace-header"><div class="workspace-title" style="color: #a78bfa; font-weight: 700;">COMBINED USER BALANCE CHECK - CISA</div></div>
                     <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ {cisa_prev:,.2f}</strong></div>
                     <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ {cisa_deb:,.2f}</strong></div>
                     <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ {cisa_cred:,.2f}</strong></div>
                     <div class="recon-row total"><span style="color: #3b82f6;">Total</span><strong style="color: #3b82f6;">£ {cisa_tot:,.2f}</strong></div>
-                    <br>
+                    <br><br>
                     <div class="recon-row"><span>Internal CUB from Rec Date</span><strong>£ {cisa_rec:,.2f}</strong></div>
                     <div class="recon-row"><span style="color: #10b981; font-weight:700;">Difference</span><strong style="color: #10b981;">£ {cisa_diff:,.2f}</strong></div>
                 </div>
@@ -228,19 +248,19 @@ try:
         with col2:
             st.markdown(f"""
                 <div class="workspace-card">
-                    <div class="workspace-header"><div class="workspace-title" style="color: #a78bfa;">COMBINED USER BALANCE CHECK - LISA</div></div>
+                    <div class="workspace-header"><div class="workspace-title" style="color: #a78bfa; font-weight: 700;">COMBINED USER BALANCE CHECK - LISA</div></div>
                     <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ {lisa_prev:,.2f}</strong></div>
                     <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ {lisa_deb:,.2f}</strong></div>
                     <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ {lisa_cred:,.2f}</strong></div>
                     <div class="recon-row total"><span style="color: #3b82f6;">Total</span><strong style="color: #3b82f6;">£ {lisa_tot:,.2f}</strong></div>
-                    <br>
+                    <br><br>
                     <div class="recon-row"><span>Internal CUB from Rec Date</span><strong>£ {lisa_rec:,.2f}</strong></div>
                     <div class="recon-row"><span style="color: #10b981; font-weight:700;">Difference</span><strong style="color: #10b981;">£ {lisa_diff:,.2f}</strong></div>
                 </div>
             """, unsafe_allow_html=True)
 
     # ==========================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (IMAGE_499DC7.PNG RESTORED)
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
     # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
@@ -253,7 +273,6 @@ try:
         cisa_net_change = parse_live_value(df_tab2, "CISA Net Change", 1, -971704.00)
         lisa_net_change = parse_live_value(df_tab2, "LISA Net Change", 1, 610408.97)
 
-        # Top Metric Cards
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">TOTAL REQUIREMENT</div><div class="metric-value blue">£ {req_val:,.2f}</div></div>
@@ -265,7 +284,6 @@ try:
         
         st.markdown("### Client Money Balances & Asset Ledger Suite")
 
-        # Cash ISA Grid
         st.markdown(f"""
             <div class="table-header-container">
                 <div class="table-title">CASH ISA CLIENT MONEY BALANCES - GBP</div>
@@ -282,7 +300,6 @@ try:
         ])
         st.data_editor(cash_isa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="cash_isa_grid")
         
-        # Lifetime ISA Grid
         st.markdown(f"""
             <div class="table-header-container">
                 <div class="table-title">LIFETIME ISA CLIENT MONEY BALANCES - GBP</div>
@@ -298,24 +315,21 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        # Commentary Box
+        cisa_comment = parse_live_string(df_tab2, "CISA: Overall", 0, "CISA Comment pending.")
+        lisa_comment = parse_live_string(df_tab2, "LISA: Overall", 0, "LISA Comment pending.")
+        quai_comment = parse_live_string(df_tab2, "Quai: Overall", 0, "Quai Comment pending.")
+        
         st.markdown(f"""
             <div class="reason-box" style="border-left-color: #3b82f6;">
-                <div class="reason-title">📄 REASON FOR INTERNAL MOVEMENTS & COMMENTARY</div>
-                <div class="reason-section" style="font-size:13px; color:#d1d5db; line-height:1.6;">
-                    <strong>CISA: Overall Shortfall of £4,393.67</strong><br>
-                    • Amount of £4,393.67 residual interest paid to users as part of the transfer out process.<br>
-                    • To be moved from CISA corporate interest to CM 17/06.<br><br>
-                    <strong>LISA: Overall Shortfall of £243.63</strong><br>
-                    • Amount of £243.63 residual interest paid to users as part of the transfer out process.<br>
-                    • To be moved from LISA corporate interest to CM 17/06.<br><br>
-                    <strong>Quai: Overall Surplus of £0.18</strong><br>
-                    • Quai to arrange amount to written off 17/06.
+                <div class="reason-title">📊 REASON FOR INTERNAL MOVEMENTS & COMMENTARY</div>
+                <div class="reason-section" style="font-size:13px; color:#d1d5db; line-height:1.6; white-space: pre-line;">
+                    <strong>CISA Strategy Matrix</strong><br>• {cisa_comment}<br><br>
+                    <strong>LISA Strategy Matrix</strong><br>• {lisa_comment}<br><br>
+                    <strong>Platform Audit Context</strong><br>• {quai_comment}
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # Live Treasury Audit Workspace Suite
         st.markdown("### 🏠 Live Treasury Audit Workspace")
         audit_tab_cisa, audit_tab_lisa = st.tabs(["🚨 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
         with audit_tab_cisa:
@@ -449,7 +463,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card" style="margin-bottom:0;">
                     <div class="workspace-header"><div class="workspace-title">Individual Client Balances Breakdown</div></div>
-                    <div class="recon-row"><span>Combined User Balance</span><strong>£ {combined_user_balance:,.2f}</strong></div>
+                    <div class="recon-row"><span>Combined User Balance</span>export <strong>£ {combined_user_balance:,.2f}</strong></div>
                     <div class="recon-row"><span>Less: Unallocated Funds Pool</span><strong style="color:#ef4444;">£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Add: Pending Transfers In</span><strong style="color:#10b981;">+£ {transfers_isa:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px;"><span>Individual Client Balances</span><strong style="color:#3b82f6;">£ {individual_client_bal:,.2f}</strong></div>
