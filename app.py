@@ -420,7 +420,7 @@ try:
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
         st.markdown("<br>### 🌐 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
-        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (100% Live Copy Paste Cells C60-E62)", expanded=True):
+        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown", expanded=True):
             b_prev = safe_float(df_tab2.iloc[59, 2]) if df_tab2.shape[0] > 59 else 2319020.75
             b_cob  = safe_float(df_tab2.iloc[59, 3]) if df_tab2.shape[0] > 59 else 0.0
             b_var  = b_cob - b_prev if b_cob != 0.0 else -2319020.75
@@ -457,7 +457,7 @@ try:
 
             st.markdown(f"""
                 <div style="background-color: #11141d; padding: 15px; border-radius: 6px; border: 1px solid #1f2937; margin-bottom: 20px;">
-                    <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS (LIVE CELLS K66-K68)</span><br>
+                    <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS</span><br>
                     <div class="recon-row"><span>Requirement</span><strong>£ {quai_req_val:,.2f}</strong></div>
                     <div class="recon-row"><span>Resource</span><strong>£ {quai_res_val:,.2f}</strong></div>
                     <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
@@ -575,7 +575,7 @@ try:
         st.markdown(f"""
             <div class="workspace-card" style="margin-top:20px;">
                 <div class="recon-row" style="font-size:15px;"><span>Sub-Total Requirement (pre-Interest)</span><strong>£ {subtotal_pre_interest:,.2f}</strong></div>
-                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual (Cell E35)</span><strong>£ {interest_due:,.2f}</strong></div>
+                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual</span><strong>£ {interest_due:,.2f}</strong></div>
                 <div class="recon-row total" style="font-size:18px; color:#10b981; border-top:2px solid #1f2937; padding-top:15px;">
                     <span>🏛️ Final Client Money Requirement Target</span><strong>£ {final_client_money_req:,.2f}</strong>
                 </div>
@@ -653,7 +653,7 @@ try:
             """, unsafe_allow_html=True)
 
         st.markdown("### 🔍 Categorized System Breaks & Audit Logs Expanse")
-        with st.expander("💳 Bulk Ledger credits not applied to user balance (Live File Synced)", expanded=True):
+        with st.expander("💳 Bulk Ledger credits not applied to user balance", expanded=True):
             cr_df = pd.DataFrame([{"Date": "16/06/2026", "Errored Order ID/break details": "Transfer in not yet applied to users", "Admin Link": "N/A", "Action": "N/A", "Jira Ticket": "N/A", "Amount": 2958695.42}])
             st.data_editor(cr_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t5_cr_breaks_sec")
 
