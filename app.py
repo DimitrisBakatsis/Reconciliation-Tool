@@ -87,19 +87,19 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# 🛠️ LIVE CELL PARSER & CLEANER
+# 🛠️ LIVE CELL PARSER & CLEANER - ALWAYS RETURN FLOAT (NEVER NONE) TO PREVENT FORMATTING ERRORS
 def safe_float(val):
     if pd.isna(val):
-        return None
+        return 0.0
     if isinstance(val, (int, float)):
         return float(val)
     try:
         clean_str = str(val).replace("£", "").replace(",", "").replace("Units", "").strip()
         if clean_str == "" or clean_str.lower() == "n/a" or clean_str == "-":
-            return None
+            return 0.0
         return float(clean_str)
     except:
-        return None
+        return 0.0
 
 def parse_live_value(df, keyword, offset_col=1, default=0.0):
     try:
@@ -108,8 +108,7 @@ def parse_live_value(df, keyword, offset_col=1, default=0.0):
                 cell_str = str(df.iloc[r, c]).strip().lower()
                 if keyword.lower() in cell_str:
                     val = df.iloc[r, c + offset_col]
-                    parsed = safe_float(val)
-                    return parsed if parsed is not None else default
+                    return safe_float(val)
         return default
     except:
         return default
@@ -156,7 +155,7 @@ def extract_break_row_data(df, search_keyword):
                 if search_keyword.lower() in str(df.iloc[r, c]).lower():
                     category = str(df.iloc[r, c]).strip()
                     val = df.iloc[r, c + 1]
-                    numeric_val = safe_float(val) if safe_float(val) is not None else 0.0
+                    numeric_val = safe_float(val)
                     tx = str(df.iloc[r, c + 2]).strip() if pd.notna(df.iloc[r, c + 2]) else "N/A"
                     action = str(df.iloc[r, c + 3]).strip() if pd.notna(df.iloc[r, c + 3]) else "N/A"
                     return {"Discrepancy Category": category, "Value / Discrepancy": numeric_val, "Key Transactions Source": tx, "Actions Planned / Taken": action}
@@ -183,7 +182,7 @@ def compute_unalloc_aging_buckets(df):
             if pd.isna(val_m) or str(val_m).strip().lower() in ["", "n/a", "diff", "sum"]:
                 continue
                 
-            amt = safe_float(val_m) if safe_float(val_m) is not None else 0.0
+            amt = safe_float(val_m)
             if amt == 0.0:
                 continue
                 
@@ -205,7 +204,7 @@ def compute_unalloc_aging_buckets(df):
             
     return cisa_buckets, lisa_buckets
 
-# 🛠️ DYNAMIC CELL PARSER ΓΙΑ ΤΑ SECONDARY PORTFOLIOS
+# 🛠️ DYNAMIC CELL PARSER
 def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, performed_by="Quai - Cash Held"):
     try:
         for r in range(df.shape[0]):
@@ -237,39 +236,6 @@ def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, perf
         return {"Bank": bank_name, "Account": row_keyword, "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": entity_name, "Performed By": performed_by}
     except:
         return {"Bank": bank_name, "Account": row_keyword, "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": entity_name, "Performed By": performed_by}
-
-# 🛠️ DYNAMIC PARSER ΓΙΑ ΤΑ BREAK SECTIONS TOY TAB 5
-def extract_tab5_break_section(df, header_keyword):
-    try:
-        start_row = locate_row_index(df, header_keyword)
-        if start_row is None:
-            return pd.DataFrame()
-        
-        rows_list = []
-        for idx in range(start_row + 2, start_row + 10):
-            if idx >= df.shape[0]:
-                break
-            
-            cell_check = str(df.iloc[idx, 0]).strip().lower()
-            cell_tot_check = str(df.iloc[idx, 4]).strip().lower()
-            
-            if "tot" in cell_check or "tot" in cell_tot_check:
-                break
-                
-            if pd.isna(df.iloc[idx, 0]) and pd.isna(df.iloc[idx, 5]):
-                continue
-                
-            rows_list.append({
-                "Date": str(df.iloc[idx, 0]).split()[0] if pd.notna(df.iloc[idx, 0]) else "N/A",
-                "Errored Order ID/break details": str(df.iloc[idx, 1]).strip() if pd.notna(df.iloc[idx, 1]) else "N/A",
-                "Admin Link": str(df.iloc[idx, 2]).strip() if pd.notna(df.iloc[idx, 2]) else "N/A",
-                "Action": str(df.iloc[idx, 3]).strip() if pd.notna(df.iloc[idx, 3]) else "N/A",
-                "Jira Ticket": str(df.iloc[idx, 4]).strip() if pd.notna(df.iloc[idx, 4]) else "N/A",
-                "Amount": safe_float(df.iloc[idx, 5]) if df.shape[1] > 5 else 0.0
-            })
-        return pd.DataFrame(rows_list)
-    except:
-        return pd.DataFrame()
 
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
@@ -558,7 +524,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Individual Client Balances Breakdown</div></div>
-                    <div class="recon-row"><span>Combined User Balance</span>#<strong>£ {combined_user_balance:,.2f}</strong></div>
+                    <div class="recon-row"><span>Combined User Balance</span><strong>£ {combined_user_balance:,.2f}</strong></div>
                     <div class="recon-row"><span>Less: Unallocated Funds Pool</span><strong style="color:#ef4444;">£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Add: Pending Transfers In</span><strong style="color:#10b981;">+£ {transfers_isa:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px;"><span>Individual Client Balances</span><strong style="color:#3b82f6;">£ {individual_client_bal:,.2f}</strong></div>
@@ -568,7 +534,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments</div></div>
-                    <div class="recon-row"><span>Unallocated Balances Pool</span>#<strong>£ {less_unallocated:,.2f}</strong></div>
+                    <div class="recon-row"><span>Unallocated Balances Pool</span><strong>£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">£ {temp_tx_funding:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding:,.2f}</strong></div>
                 </div>
@@ -584,7 +550,7 @@ try:
         """, unsafe_allow_html=True)
 
     # ==========================================
-    # 👑 🔥 TAB 5: CISA INTERNAL WORKINGS (SAFE SCREENSHOT SYNC)
+    # 👑 🔥 TAB 5: CISA INTERNAL WORKINGS (SAFE SECURE)
     # ==========================================
     elif selected_tab == "5. CISA Internal Workings":
         df_tab5 = pd.read_excel(EXCEL_FILE, sheet_name="5. CISA Internal Workings", header=None)
@@ -658,7 +624,7 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-        # 🚫 4. System Breaks Log Sections (IMAGE_3B6822.PNG SECURE SYNC)
+        # 🚫 4. System Breaks Log Sections
         st.markdown("### 🔍 Categorized System Breaks & Audit Logs Expanse")
         
         with st.expander("💳 Bulk Ledger credits not applied to user balance (Live File Synced)", expanded=True):
