@@ -58,13 +58,13 @@ st.markdown("""
     .recon-row.total { border-bottom: none; font-weight: 700; font-size: 15px; color: #3b82f6; padding-top: 14px; }
     .recon-row.difference { border-bottom: none; font-weight: 700; font-size: 15px; color: #10b981; padding-top: 14px; }
     
-    /* Reason for internal movements block */
+    /* Strategic Reason / Conclusion Box look */
     .reason-box {
         background-color: #1a1c24;
-        border-left: 4px solid #3b82f6;
+        border-left: 4px solid #ef4444;
         padding: 20px;
         border-radius: 6px;
-        margin-top: 25px;
+        margin-top: 10px;
         margin-bottom: 25px;
     }
     .reason-title { font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -147,11 +147,11 @@ try:
         "15. Reconciliation actions (aut"
     ]
     
-    # 🔴 ΦΙΛΤΡΑΡΙΣΜΑ: Αποκλείουμε τα 5 κίτρινα ΚΑΙ το Tab 15 πλέον
+    # ΦΙΛΤΡΑΡΙΣΜΑ: Αποκλείουμε τα 5 κίτρινα ΚΑΙ το Tab 15 πλέον
     excluded_sheets = ["Unalloc_Data", "CISA Funding", "LISA Funding", "CISA Breaks", "LISA Breaks", "15. Reconciliation actions (aut"]
     filtered_menu = [item for item in full_menu_options if item not in excluded_sheets]
     
-    formatted_date = "16/06/2026"
+    formatted_date = "17/06/2026"
 
     # --- SIDEBAR ---
     st.sidebar.markdown("<div style='padding-top: 10px;'><span style='font-size: 16px; font-weight: 700; color: #fff;'>CASS Corporate Portal</span></div>", unsafe_allow_html=True)
@@ -171,6 +171,8 @@ try:
         "Variance": st.column_config.NumberColumn("Variance", format="£%,.2f"),
         "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
         "Payin Amount": st.column_config.NumberColumn("Payin Amount", format="£%,.2f"),
+        "Discrepancies": st.column_config.NumberColumn("Discrepancies", format="£%,.2f"),
+        "Amounts": st.column_config.NumberColumn("Amounts", format="£%,.2f")
     }
 
     # ==========================================
@@ -240,6 +242,7 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
+        # Commentary Box
         st.markdown("""
             <div class="reason-box">
                 <div class="reason-title">📋 Reason for internal movements & Commentary</div>
@@ -248,55 +251,6 @@ try:
                 <div class="reason-section" style="margin-bottom: 0;"><strong>Quai: Overall Surplus of £0.18</strong><br>• Quai to arrange amount to written off 17/06.</div>
             </div>
         """, unsafe_allow_html=True)
-
-        # Live Treasury Workspace
-        st.markdown("### ✍️ Live Treasury Audit Workspace")
-        audit_tab_cisa, audit_tab_lisa = st.tabs(["🔒 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
-        with audit_tab_cisa:
-            col_form, col_logs = st.columns([1, 2])
-            with col_form:
-                cisa_from = st.selectbox("From Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], key="cisa_from_sel")
-                cisa_to = st.selectbox("To Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], index=1, key="cisa_to_sel")
-                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="cisa_amt_zero")
-                cisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement...", key="cisa_reason_input")
-                if st.button("Commit to Audit Log", key="btn_commit_cisa"):
-                    if cisa_amount > 0 or cisa_reason:
-                        st.session_state.cisa_movements.append({"From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason if cisa_reason else "Manual adjustment"})
-                        st.rerun()
-            with col_logs:
-                if not st.session_state.cisa_movements: st.info("No active logs recorded.")
-                else:
-                    for idx, entry in enumerate(st.session_state.cisa_movements):
-                        st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
-                        if st.button(f"🗑 Remove Entry", key=f"del_cisa_{idx}"):
-                            st.session_state.cisa_movements.pop(idx)
-                            st.rerun()
-
-        with audit_tab_lisa:
-            col_form_l, col_logs_l = st.columns([1, 2])
-            with col_form_l:
-                lisa_from = st.selectbox("From Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"], key="lisa_from_sel")
-                lisa_to = st.selectbox("To Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"], index=1, key="lisa_to_sel")
-                lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="lisa_amt_zero")
-                lisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement...", key="lisa_reason_input")
-                if st.button("Commit to Audit Log", key="btn_commit_lisa"):
-                    if lisa_amount > 0 or lisa_reason:
-                        st.session_state.lisa_movements.append({"From": lisa_from, "To": lisa_to, "Amount": f"£{lisa_amount:,.2f}", "Reason": lisa_reason if lisa_reason else "Manual adjustment"})
-                        st.rerun()
-            with col_logs_l:
-                if not st.session_state.lisa_movements: st.info("No active logs recorded.")
-                else:
-                    for idx, entry in enumerate(st.session_state.lisa_movements):
-                        st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
-                        if st.button(f"🗑️ Remove Entry", key=f"del_lisa_{idx}"):
-                            st.session_state.lisa_movements.pop(idx)
-                            st.rerun()
-
-        # Expandable Sub-Ledgers
-        st.markdown("<br>### 🔍 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
-        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown"):
-            stocks_df = pd.DataFrame([{"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys", "Previous Day Balance": 1912753.33, "COB Balance": 1413133.97, "Variance": -499619.0, "Performed By": "Quai - Cash Held"}])
-            st.data_editor(stocks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_grid")
 
     # ==========================================
     # 📈 VIEW: 3. UNALLOC REC
@@ -352,6 +306,75 @@ try:
             {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "0199818b-0e35...", "Date Created": "25/09/2025", "Type": "credit", "Amount": 25.82, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 191, "Breach Notes": "Breach raised 09/10"}
         ])
         st.data_editor(lisa_unalloc_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="lisa_unalloc_editor")
+
+    # =========================================================================================
+    # 🏛️ 🚀 NEW PREMIUM VIEW: 4. CISA - CASS INTERNAL REC (PIXEL-PERFECT IMAGE_4AFB1E.PNG)
+    # =========================================================================================
+    elif selected_tab == "4. CISA - CASS Internal Rec":
+        st.markdown("### 📊 Internal Client Money Reconciliation Suite (v4.1) - Cash ISA")
+        st.caption("FCA Compliance Ledger Verification according to CASS 7.16.22 Rules.")
+
+        # --- 1. COMPLIANCE BANNER HEADER ---
+        st.markdown("""
+            <div class="reason-box">
+                <div class="reason-title" style="color: #ef4444; font-size: 15px;">⚠️ Action Required: Daily Shortfall Detected</div>
+                <div class="reason-section" style="font-size: 14px;">
+                    <strong>Calculated Movement:</strong> <span style="color:#ef4444; font-weight:700;">-£3,473.20</span><br>
+                    <strong>Conclusion:</strong> Overall Shortfall of £3,473.20. Amount of £3,473.20 residual interest paid to users as part of the transfer out process. 
+                    <u>To be moved from CISA corporate interest to CM 18/06.</u>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # --- 2. BREAKS & DISCREPANCIES MATRIX ---
+        st.markdown('<div class="table-header-container"><div class="table-title">🚫 Outstanding Breaks & Discrepancies Ledger</div><div class="net-change-badge orange">Net Variance: £1,316,952.93</div></div>', unsafe_allow_html=True)
+        
+        breaks_df = pd.DataFrame([
+            {"Discrepancies Ledger Line": "User Credits / Surplus not applied to ledger", "Discrepancies": 0.00, "Key transactions": "N/A", "Actions Taken / Planned": "N/A"},
+            {"Discrepancies Ledger Line": "User Debits / Shortfall not applied to ledger", "Discrepancies": -3473.20, "Key transactions": "Amount of £3,473.20 residual interest paid to users as part of transfer out", "Actions Taken / Planned": "To be moved from CISA corporate interest to CM 18/06"},
+            {"Discrepancies Ledger Line": "Bulk Ledger Credits / Surplus not applied to users", "Discrepancies": 1320426.13, "Key transactions": "Users transfers in from other providers", "Actions Taken / Planned": "Applied to users on a T+1 basis"},
+            {"Discrepancies Ledger Line": "Bulk Ledger Debits / Shortfall not applied to users", "Discrepancies": 0.00, "Key transactions": "N/A", "Actions Taken / Planned": "N/A"}
+        ])
+        st.data_editor(breaks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="breaks_rec_grid")
+
+        # --- 3. CLIENT MONEY REQUIREMENT CALCULATION (CASS 7.16.22) ---
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="table-header-container"><div class="table-title">🏛️ CASS 7.16.22 Client Money Requirement Calculation</div><div class="net-change-badge green">CASS Compliant Grid</div></div>', unsafe_allow_html=True)
+        
+        col_calc_left, col_calc_right = st.columns(2)
+        
+        with col_calc_left:
+            st.markdown("""
+                <div class="workspace-card" style="margin-bottom:0;">
+                    <div class="workspace-header"><div class="workspace-title">Individual Client Balances Breakdown</div></div>
+                    <div class="recon-row"><span>Combined User Balance</span><strong>£ 2,386,540,828.26</strong></div>
+                    <div class="recon-row"><span>Less: Unallocated Funds Pool</span><strong style="color:#ef4444;">-£ 256,846.48</strong></div>
+                    <div class="recon-row"><span>Add: Pending Transfers In (ISA Providers)</span><strong style="color:#10b981;">+£ 1,320,426.13</strong></div>
+                    <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px;"><span>Individual Client Balances</span><strong style="color:#3b82f6;">£ 2,388,118,100.87</strong></div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with col_calc_right:
+            st.markdown("""
+                <div class="workspace-card" style="margin-bottom:0;">
+                    <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments (2a + 3)</div></div>
+                    <div class="recon-row"><span>Unallocated Balances</span><strong>-£ 256,846.48</strong></div>
+                    <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">-£ 81,188.22</strong></div>
+                    <div class="recon-row"><span>Shortfall in Assets Portfolio</span><strong>£ 0.00</strong></div>
+                    <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>-£ 81,188.22</strong></div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # Bottom Summary Totals Line
+        st.markdown("""
+            <div class="workspace-card" style="margin-top:20px;">
+                <div class="recon-row" style="font-size:16px;"><span><strong>Sub-Total Requirement (pre-Interest)</strong></span><strong>£ 2,387,861,254.39</strong></div>
+                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual (QMMF Line)</span><span>£ 0.00</span></div>
+                <div class="recon-row total" style="font-size:18px; color:#10b981; border-top:2px solid #1f2937; padding-top:15px;">
+                    <span>🏛️ Final Client Money Requirement</span><strong>£ 2,387,861,254.39</strong>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
