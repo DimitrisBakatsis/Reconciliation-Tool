@@ -103,16 +103,16 @@ def load_raw_excel():
 # 🛠️ LIVE CELL PARSER & CLEANER
 def safe_float(val):
     if pd.isna(val):
-        return None
+        return 0.0
     if isinstance(val, (int, float)):
         return float(val)
     try:
         clean_str = str(val).replace("£", "").replace(",", "").replace("Units", "").strip()
         if clean_str == "" or clean_str.lower() == "n/a":
-            return None
+            return 0.0
         return float(clean_str)
     except:
-        return None
+        return 0.0
 
 def parse_live_value(df, keyword, offset_col=1, default=0.0):
     try:
@@ -121,8 +121,7 @@ def parse_live_value(df, keyword, offset_col=1, default=0.0):
                 cell_str = str(df.iloc[r, c]).strip().lower()
                 if keyword.lower() in cell_str:
                     val = df.iloc[r, c + offset_col]
-                    parsed = safe_float(val)
-                    return parsed if parsed is not None else default
+                    return safe_float(val)
         return default
     except:
         return default
@@ -169,7 +168,7 @@ def extract_break_row_data(df, search_keyword):
                 if search_keyword.lower() in str(df.iloc[r, c]).lower():
                     category = str(df.iloc[r, c]).strip()
                     val = df.iloc[r, c + 1]
-                    numeric_val = safe_float(val) if safe_float(val) is not None else 0.0
+                    numeric_val = safe_float(val)
                     tx = str(df.iloc[r, c + 2]).strip() if pd.notna(df.iloc[r, c + 2]) else "N/A"
                     action = str(df.iloc[r, c + 3]).strip() if pd.notna(df.iloc[r, c + 3]) else "N/A"
                     return {"Discrepancy Category": category, "Value / Discrepancy": numeric_val, "Key Transactions Source": tx, "Actions Planned / Taken": action}
@@ -196,7 +195,7 @@ def compute_unalloc_aging_buckets(df):
             if pd.isna(val_m) or str(val_m).strip().lower() in ["", "n/a", "diff", "sum"]:
                 continue
                 
-            amt = safe_float(val_m) if safe_float(val_m) is not None else 0.0
+            amt = safe_float(val_m)
             if amt == 0.0:
                 continue
                 
@@ -218,7 +217,7 @@ def compute_unalloc_aging_buckets(df):
             
     return cisa_buckets, lisa_buckets
 
-# 🛠️ DYNAMIC CELL PARSER ΓΙΑ ΤΑ SECONDARY PORTFOLIOS (VLOOKUP LOGIC VIA ACCOUNT MATCH)
+# 🛠️ 100% ΔΥΝΑΜΙΚΟΣ ΥΠΟΛΟΓΙΣΜΟΣ VARIANCE (COB - PREVIOUS DAY)
 def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, performed_by="Quai - Cash Held"):
     try:
         for r in range(df.shape[0]):
@@ -231,26 +230,23 @@ def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, perf
                         numeric_cells.append(float(cell_val))
                     elif pd.notna(cell_val) and any(char.isdigit() for char in str(cell_val)) and not ("147" in str(cell_val) or "903" in str(cell_val)):
                         val_cleaned = safe_float(cell_val)
-                        if val_cleaned is not None:
-                            numeric_cells.append(val_cleaned)
+                        numeric_cells.append(val_cleaned)
                 
                 prev_day = numeric_cells[0] if len(numeric_cells) > 0 else 0.0
-                cob_bal  = numeric_cells[1] if len(numeric_cells) > 1 else None
-                
-                variance = cob_bal - prev_day if cob_bal is not None else (0.0 - prev_day)
+                cob_bal  = numeric_cells[1] if len(numeric_cells) > 1 else 0.0
                 
                 return {
                     "Bank": bank_name,
                     "Account": row_keyword,
                     "Previous Day Balance": prev_day,
                     "COB Balance": cob_bal,
-                    "Variance": variance,
+                    "Variance": cob_bal - prev_day,
                     "Entity": entity_name,
                     "Performed By": performed_by
                 }
-        return {"Bank": bank_name, "Account": row_keyword, "Previous Day Balance": 0.0, "COB Balance": None, "Variance": 0.0, "Entity": entity_name, "Performed By": performed_by}
+        return {"Bank": bank_name, "Account": row_keyword, "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": entity_name, "Performed By": performed_by}
     except:
-        return {"Bank": bank_name, "Account": row_keyword, "Previous Day Balance": 0.0, "COB Balance": None, "Variance": 0.0, "Entity": entity_name, "Performed By": performed_by}
+        return {"Bank": bank_name, "Account": row_keyword, "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": entity_name, "Performed By": performed_by}
 
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
@@ -347,9 +343,9 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-    # =========================================================================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (ΔΥΝΑΜΙΚΟΣ ΥΠΟΛΟΓΙΣΜΟΣ ΚΕΛΙΩΝ C60-D62 & K66-K68)
-    # =========================================================================================
+    # ==========================================
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
+    # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
         
@@ -446,11 +442,9 @@ try:
                     for idx, entry in enumerate(st.session_state.cisa_movements):
                         st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
 
-        # 🌐 SECONDARY PORTFOLIOS (100% ΔΥΝΑΜΙΚΟΙ ΥΠΟΛΟΓΙΣΜΟΙ ΒΑΣΕΙ ΚΕΛΙΩΝ C60-D62 & K66-K68)
         st.markdown("<br>### 🌐 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
         
         with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (100% Dynamic Sync)", expanded=True):
-            # 🔴 ΠΙΝΑΚΑΣ 1: Live ανάγνωση από το εύρος C60 έως D62 του Excel (COB Balance = None αν είναι κενό)
             row_barclays = find_row_data_by_keyword_match(df_tab2, "90314552", "Barclays UK PLC", "Saveable Limited", "Quai - Cash Held")
             row_wf1      = find_row_data_by_keyword_match(df_tab2, "SAVEABLE LTD", "Winterfloods", "Saveable Limited", "Quai - Units Held")
             df_wf_block  = df_tab2.iloc[locate_row_index(df_tab2, "Winterfloods")+1:].reset_index(drop=True)
@@ -460,11 +454,11 @@ try:
             st.data_editor(stocks_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger_live")
 
         with st.expander("🔑 Other Client Money Accounts & QMMF Liquid Reserves", expanded=True):
-            # 🔴 ΠΙΝΑΚΑΣ 2: Live ανάγνωση των Quai Resource & Requirement από τα κελιά K66 έως K68 του Excel
+            # 🔴 LIVE CELLS K66-K68 TARGET LOOKUP ENGINE
             quai_req = df_tab2.iloc[65, 10] if df_tab2.shape[0] > 65 and df_tab2.shape[1] > 10 else 3532196.96
             quai_res = df_tab2.iloc[66, 10] if df_tab2.shape[0] > 66 and df_tab2.shape[1] > 10 else 3532197.14
-            quai_req = safe_float(quai_req) if safe_float(quai_req) is not None else 3532196.96
-            quai_res = safe_float(quai_res) if safe_float(quai_res) is not None else 3532197.14
+            quai_req = safe_float(quai_req)
+            quai_res = safe_float(quai_res)
             quai_sh  = quai_res - quai_req
             
             st.markdown(f"""
@@ -614,7 +608,7 @@ try:
     else:
         st.markdown(f"### 📂 View Mode: {selected_tab}")
         try:
-            df_any = pd.read_excel(EXCEL_FILE, sheet_name=selected_tab, header=None)
+            df_any = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
             df_cleaned = df_any.dropna(how='all').dropna(axis=1, how='all').fillna("")
             st.dataframe(df_cleaned.astype(str), use_container_width=True, hide_index=True)
         except:
