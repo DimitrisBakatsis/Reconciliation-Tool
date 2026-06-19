@@ -114,6 +114,20 @@ def parse_live_value(df, keyword, offset_col=1, default=0.0):
     except:
         return default
 
+# 🛠️ DYNAMIC CONCLUSION EXTRACTOR: Ψάχνει live στη γραμμή του Shortfall για το κείμενο Conclusion
+def parse_dynamic_conclusion(df, row_index, default="N/A"):
+    if row_index is None:
+        return default
+    try:
+        # Ψάχνει σε όλες τις επόμενες στήλες της ίδιας γραμμής για το κείμενο "conclusion"
+        for col_idx in range(df.shape[1]):
+            cell_content = str(df.iloc[row_index, col_idx]).strip()
+            if "conclusion" in cell_content.lower():
+                return cell_content
+        return default
+    except:
+        return default
+
 # 🛠️ LIVE ROW LOCATOR: Επιστρέφει το index της γραμμής που περιέχει το keyword
 def locate_row_index(df, keyword):
     for r in range(df.shape[0]):
@@ -151,14 +165,23 @@ try:
     st.markdown("<div class='main-header'>CASS Reconciliation & Daily Client Money Reporting</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='date-subheader'><span>📅</span> Close of Business Date: <strong>{formatted_date}</strong></div>", unsafe_allow_html=True)
 
-    # =========================================================================================
-    # 👑 TAB 1: SIGN OFF & OTHER CHECKS (PREMIUM LAYOUT + LIVE DATA)
-    # =========================================================================================
+    currency_config = {
+        "Previous Day Balance": st.column_config.NumberColumn("Previous Day Balance", format="£%,.2f"),
+        "COB Balance": st.column_config.NumberColumn("COB Balance", format="£%,.2f"),
+        "Variance": st.column_config.NumberColumn("Variance", format="£%,.2f"),
+        "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
+        "Payin Amount": st.column_config.NumberColumn("Payin Amount", format="£%,.2f"),
+        "Discrepancies": st.column_config.NumberColumn("Discrepancies", format="£%,.2f"),
+        "Amounts": st.column_config.NumberColumn("Amounts", format="£%,.2f")
+    }
+
+    # ==========================================
+    # 👑 TAB 1: SIGN OFF & OTHER CHECKS
+    # ==========================================
     if selected_tab == "1. Sign Off & Other Checks":
         st.markdown("### Manual Combined User Balance Suite")
         df_tab1 = pd.read_excel(EXCEL_FILE, sheet_name="1. Sign Off & Other Checks", header=None)
         
-        # Live Parsing με βάση τα keywords
         cisa_prev = parse_live_value(df_tab1, "Internal CUB from previous day", 1, 2386124297.55)
         cisa_deb  = parse_live_value(df_tab1, "Debits (Recon data) from Rec data", 1, 10417421.49)
         cisa_cred = parse_live_value(df_tab1, "Credits (Recon data) from Rec data", 1, 11826133.22)
@@ -166,7 +189,6 @@ try:
         cisa_rec  = parse_live_value(df_tab1, "Internal CUB from Rec Date", 1, 2387533039.28)
         cisa_diff = parse_live_value(df_tab1, "Difference", 1, 0.00)
 
-        # Splitting για το κάτω block του LISA
         df_lisa_part = df_tab1.iloc[10:].reset_index(drop=True)
         lisa_prev = parse_live_value(df_lisa_part, "Internal CUB from previous day", 1, 217714664.80)
         lisa_deb  = parse_live_value(df_lisa_part, "Debits (Recon data) from Rec data", 1, 251643.28)
@@ -203,9 +225,9 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-    # =========================================================================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (PREMIUM LAYOUT + LIVE BANK DATA)
-    # =========================================================================================
+    # ==========================================
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
+    # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
         
@@ -224,15 +246,13 @@ try:
         """, unsafe_allow_html=True)
         
         st.markdown("### Client Money Balances & Asset Ledger Suite")
-        
-        # Live εμφάνιση ολόκληρου του καθαρισμένου πίνακα τραπεζών
         st.markdown('<div class="table-header-container"><div class="table-title">Live Bank Ledger Matrix Stream</div></div>', unsafe_allow_html=True)
         df_tab2_clean = df_tab2.dropna(how="all").dropna(axis=1, how="all").fillna("")
         st.dataframe(df_tab2_clean.iloc[2:35].astype(str), use_container_width=True, hide_index=True)
 
-    # =========================================================================================
-    # 📈 TAB 3: UNALLOC REC (PREMIUM AGING PROGRESS BARS + LIVE BUCKETS)
-    # =========================================================================================
+    # ==========================================
+    # 📈 TAB 3: UNALLOC REC
+    # ==========================================
     elif selected_tab == "3. Unalloc Rec":
         st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
         df_tab3 = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
@@ -257,27 +277,30 @@ try:
         col_bar_left, col_bar_right = st.columns(2)
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
-            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {bucket_0_2:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days</span><span>£ {bucket_0_2:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(0.46)
-            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {bucket_3_5:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days</span><span>£ {bucket_3_5:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(0.39)
         with col_bar_right:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Lifetime ISA Aging Distribution</p>", unsafe_allow_html=True)
-            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {bucket_6_9:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟠 6-9 Days</span><span>£ {bucket_6_9:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(0.28)
-            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {bucket_10p:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days</span><span>£ {bucket_10p:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(0.05)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # =========================================================================================
-    # 🏛️ 🚀 TAB 4: CISA - CASS INTERNAL REC (ΠΛΗΡΗΣ ΠΛΗΡΟΦΟΡΙΑ IMAGE_4A7EE6.PNG + LIVE)
+    # 🏛️ 🚀 TAB 4: CISA - CASS INTERNAL REC (ΠΛΗΡΩΣ ΔΥΝΑΜΙΚΟ CONCLUSTION BANNER)
     # =========================================================================================
     elif selected_tab == "4. CISA - CASS Internal Rec":
         df_tab4 = pd.read_excel(EXCEL_FILE, sheet_name="4. CISA - CASS Internal Rec", header=None)
         
-        # Live Lookup Τιμών
-        shortfall_calculated  = parse_live_value(df_tab4, "Daily Surplus or Shortfall", 1, -3722.45)
-        conclusion_excel_text = parse_live_value(df_tab4, "Daily Surplus or Shortfall", 3, "N/A")
+        # Εντοπισμός της γραμμής του Shortfall
+        row_shortfall_idx = locate_row_index(df_tab4, "Daily Surplus or Shortfall")
+        
+        # 🔴 ΔΙΟΡΘΩΣΗ: Live scan της γραμμής για να βρει το "Conclusion:" (Αγνοεί στατικές θέσεις)
+        shortfall_calculated  = parse_live_value(df_tab4, "Daily Surplus or Shortfall", 1, -4393.67)
+        conclusion_excel_text = parse_dynamic_conclusion(df_tab4, row_shortfall_idx, default="Conclusion data not found.")
         
         combined_user_balance = parse_live_value(df_tab4, "Combined User Balance", 1, 2384358224.61)
         less_unallocated      = parse_live_value(df_tab4, "Less Unallocated", 1, -277834.89)
@@ -290,13 +313,13 @@ try:
         st.markdown("### 📊 Internal Client Money Reconciliation Suite (v4.1) - Cash ISA")
         st.caption("FCA Compliance Ledger Verification according to CASS 7.16.22 Rules.")
 
-        # --- 1. COMPLIANCE BANNER HEADER ---
+        # --- 1. COMPLIANCE BANNER HEADER (LIVE TEXT) ---
         st.markdown(f"""
             <div class="reason-box">
                 <div class="reason-title" style="color: #ef4444; font-size: 15px;">⚠️ Active Regulatory Target Status</div>
-                <div class="reason-section" style="font-size: 14px;">
+                <div class="reason-section" style="font-size: 14px; white-space: pre-line;">
                     <strong>Calculated Variance Shortfall:</strong> <span style="color:#ef4444; font-weight:700;">£ {shortfall_calculated:,.2f}</span><br>
-                    <strong>Conclusion:</strong> {conclusion_excel_text}
+                    <strong>Audit Assessment:</strong> {conclusion_excel_text}
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -343,7 +366,7 @@ try:
         """, unsafe_allow_html=True)
 
     # ==========================================
-    # 📂 FALLBACK VIEW FOR OTHER SHEETS (ALL AUTOMATED)
+    # 📂 FALLBACK VIEW FOR OTHER SHEETS
     # ==========================================
     else:
         st.markdown(f"### 📂 View Mode: {selected_tab}")
