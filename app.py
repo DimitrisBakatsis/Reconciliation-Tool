@@ -117,7 +117,20 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# 🛠️ LIVE CELL PARSER (Ασφαλής για αριθμητικά δεδομένα)
+# 🛠️ LIVE CELL PARSER (Μετατρέπει σωστά strings σε floats αν περιέχουν £ ή κόμματα)
+def safe_float(val):
+    if pd.isna(val):
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    try:
+        clean_str = str(val).replace("£", "").replace(",", "").replace("Units", "").strip()
+        if clean_str == "" or clean_str.lower() == "n/a":
+            return 0.0
+        return float(clean_str)
+    except:
+        return 0.0
+
 def parse_live_value(df, keyword, offset_col=1, default=0.0):
     try:
         for r in range(df.shape[0]):
@@ -125,16 +138,12 @@ def parse_live_value(df, keyword, offset_col=1, default=0.0):
                 cell_str = str(df.iloc[r, c]).strip().lower()
                 if keyword.lower() in cell_str:
                     val = df.iloc[r, c + offset_col]
-                    if pd.notna(val) and val != "N/A":
-                        if isinstance(val, str):
-                            clean_str = val.replace("£", "").replace(",", "").replace("Units", "").strip()
-                            return float(clean_str) if clean_str else default
-                        return float(val)
+                    return safe_float(val)
         return default
     except:
         return default
 
-# 🛠️ LIVE STRING PARSER (Για κείμενα/σχόλια)
+# 🛠️ LIVE STRING PARSER
 def parse_live_string(df, keyword, offset_col=1, default=""):
     try:
         for r in range(df.shape[0]):
@@ -176,9 +185,7 @@ def extract_break_row_data(df, search_keyword):
                 if search_keyword.lower() in str(df.iloc[r, c]).lower():
                     category = str(df.iloc[r, c]).strip()
                     val = df.iloc[r, c + 1]
-                    if isinstance(val, str):
-                        val = float(val.replace("£", "").replace(",", "").strip())
-                    numeric_val = float(val) if pd.notna(val) else 0.0
+                    numeric_val = safe_float(val)
                     tx = str(df.iloc[r, c + 2]).strip() if pd.notna(df.iloc[r, c + 2]) else "N/A"
                     action = str(df.iloc[r, c + 3]).strip() if pd.notna(df.iloc[r, c + 3]) else "N/A"
                     return {"Discrepancy Category": category, "Value / Discrepancy": numeric_val, "Key Transactions Source": tx, "Actions Planned / Taken": action}
@@ -205,7 +212,7 @@ def compute_unalloc_aging_buckets(df):
             if pd.isna(val_m) or str(val_m).strip().lower() in ["", "n/a", "diff", "sum"]:
                 continue
                 
-            amt = float(val_m)
+            amt = safe_float(val_m)
             if amt == 0.0:
                 continue
                 
@@ -226,6 +233,31 @@ def compute_unalloc_aging_buckets(df):
             continue
             
     return cisa_buckets, lisa_buckets
+
+# 🛠️ ΔΥΝΑΜΙΚΟΣ PARSER ΓΙΑ ΤΟΥΣ ΚΑΤΩ ΠΙΝΑΚΕΣ ΤΟΥ TAB 2 (ΑΝΑΓΝΩΡΙΖΕΙ LIVE ΟΛΕΣ ΤΙΣ ΓΡΑΜΜΕΣ)
+def extract_sub_table(df, section_title, num_rows):
+    try:
+        start_row = locate_row_index(df, section_title)
+        if start_row is None:
+            return pd.DataFrame()
+        
+        rows_list = []
+        for i in range(2, 2 + num_rows):
+            r = start_row + i
+            if r >= df.shape[0]:
+                break
+            rows_list.append({
+                "Bank": str(df.iloc[r, 0]).strip() if pd.notna(df.iloc[r, 0]) else "",
+                "Account": str(df.iloc[r, 1]).strip() if pd.notna(df.iloc[r, 1]) else "",
+                "Previous Day Balance": safe_float(df.iloc[r, 2]),
+                "COB Balance": safe_float(df.iloc[r, 3]),
+                "Variance": safe_float(df.iloc[r, 4]),
+                "Entity": str(df.iloc[r, 5]).strip() if pd.notna(df.iloc[r, 5]) else "Saveable Limited",
+                "Performed By": str(df.iloc[r, 6]).strip() if df.shape[1] > 6 and pd.notna(df.iloc[r, 6]) else "Quai - Cash Held"
+            })
+        return pd.DataFrame(rows_list)
+    except:
+        return pd.DataFrame()
 
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
@@ -322,9 +354,9 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-    # ==========================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (IMAGE_4838A7.PNG SUB-LEDGERS PROPER POSITION)
-    # ==========================================
+    # =========================================================================================
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (IMAGE_483125.PNG 3-ROWS LIVE FIX)
+    # =========================================================================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
         
@@ -336,6 +368,7 @@ try:
         cisa_net_change = parse_live_value(df_tab2, "CISA Net Change", 1, -971704.00)
         lisa_net_change = parse_live_value(df_tab2, "LISA Net Change", 1, 610408.97)
 
+        # Top Metric Cards
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">TOTAL REQUIREMENT</div><div class="metric-value blue">£ {req_val:,.2f}</div></div>
@@ -437,17 +470,18 @@ try:
                     for idx, entry in enumerate(st.session_state.lisa_movements):
                         st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
 
-        # 🔍 RESTORED DYNAMIC LEDGERS FROM IMAGE_4838A7.PNG DIRECTLY INSIDE TAB 2
+        # 🛠️ 100% ΔΥΝΑΜΙΚΗ ΑΝΑΚΤΗΣΗ ΓΙΑ ΤΑ SECONDARY PORTFOLIOS (3-ROWS LIVE FIX)
         st.markdown("<br>### 🌐 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
         
-        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (100% Dynamic Sync)"):
-            stocks_df = pd.DataFrame([
-                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys - Awaiting settlement", "Previous Day Balance": parse_live_value(df_tab2, "90314552", -1), "COB Balance": parse_live_value(df_tab2, "90314552", 0), "Variance": parse_live_value(df_tab2, "90314552", 1), "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": parse_live_value(df_tab2, "SAVEABLE LTD", -1), "COB Balance": parse_live_value(df_tab2, "SAVEABLE LTD", 0), "Variance": parse_live_value(df_tab2, "SAVEABLE LTD", 1), "Entity": "Saveable Limited", "Performed By": "Quai - Units Held"}
-            ])
-            st.data_editor(stocks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger")
+        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (100% Dynamic Sync)", expanded=True):
+            # 🔴 ΔΙΟΡΘΩΣΗ: Τραβάει live και τις 3 γραμμές των Stocks/Shares ISA από το Excel
+            stocks_dynamic_df = extract_sub_table(df_tab2, "Stocks/Shares ISA", num_rows=3)
+            if not stocks_dynamic_df.empty:
+                st.data_editor(stocks_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger_live")
+            else:
+                st.warning("Stocks/Shares ISA section matrix structural bounds changed in Excel sheet.")
 
-        with st.expander("🔑 Other Client Money Accounts & QMMF Liquid Reserves"):
+        with st.expander("🔑 Other Client Money Accounts & QMMF Liquid Reserves", expanded=True):
             quai_req = parse_live_value(df_tab2, "Requirement", 1, 3532196.96)
             quai_res = parse_live_value(df_tab2, "Resource", 1, 3532197.14)
             quai_sh  = parse_live_value(df_tab2, "Shortfall / Surplus", 1, 0.18)
@@ -461,25 +495,24 @@ try:
                 </div>
             """, unsafe_allow_html=True)
             
-            other_accounts_df = pd.DataFrame([
-                {"Bank": "Citi Bank NA London", "Account": "Saveable UK Client Money EUR (14747763)", "Previous Day Balance": parse_live_value(df_tab2, "14747763", -1), "COB Balance": parse_live_value(df_tab2, "14747763", 0), "Variance": parse_live_value(df_tab2, "14747763", 1), "Entity": "Saveable Limited"},
-                {"Bank": "Blackrock QMMF", "Account": "Saveable Limited Account Cash ISA", "Previous Day Balance": parse_live_value(df_tab2, "Account Cash ISA", -1), "COB Balance": parse_live_value(df_tab2, "Account Cash ISA", 0), "Variance": parse_live_value(df_tab2, "Account Cash ISA", 1), "Entity": "Saveable Limited"},
-                {"Bank": "Blackrock QMMF", "Account": "Saveable Limited Lifetime Account Client Account", "Previous Day Balance": parse_live_value(df_tab2, "Lifetime Account Client Account", -1), "COB Balance": parse_live_value(df_tab2, "Lifetime Account Client Account", 0), "Variance": parse_live_value(df_tab2, "Lifetime Account Client Account", 1), "Entity": "Saveable Limited"}
-            ])
-            st.data_editor(other_accounts_df, column_config=currency_config, use_container_width=True, hide_index=True, key="other_client_money_grid")
+            # 🔴 ΔΙΟΡΘΩΣΗ: Τραβάει live όλες τις γραμμές του Other Client Money Accounts από το Excel
+            other_accounts_dynamic_df = extract_sub_table(df_tab2, "Other Client Money Accounts", num_rows=3)
+            if not other_accounts_dynamic_df.empty:
+                st.data_editor(other_accounts_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="other_client_money_live")
 
-    # ==========================================
-    # 📈 TAB 3: UNALLOC REC
-    # ==========================================
+    # =========================================================================================
+    # 📈 TAB 3: UNALLOC REC (RESTORED DYNAMIC PARSER ACCORDING TO IMAGE_492DA3.PNG)
+    # =========================================================================================
     elif selected_tab == "3. Unalloc Rec":
         st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
         df_tab3 = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
         
-        cisa_unalloc_tot = parse_live_value(df_tab3, "CISA total unallocated", 1, 294085.70)
-        lisa_unalloc_tot = parse_live_value(df_tab3, "LISA total unallocated", 1, 163659.42)
-        
+        # 🛠️ Live διαχωρισμός των ποσών από τη στήλη M & Q βάσει του SUM
         cisa_b, lisa_b = compute_unalloc_aging_buckets(df_tab3)
+        cisa_unalloc_tot = sum(cisa_b.values())
+        lisa_unalloc_tot = sum(lisa_b.values())
 
+        # Δυναμική απεικόνιση των Status Cards με τις παρενθέσεις (0.025%)
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">CISA TOTAL UNALLOCATED</div><div class="metric-value green">£ {cisa_unalloc_tot:,.2f}</div></div>
@@ -577,7 +610,7 @@ try:
         with col_calc_right:
             st.markdown(f"""
                 <div class="workspace-card" style="margin-bottom:0;">
-                    <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments</div></div>
+                    <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments (2a + 3)</div></div>
                     <div class="recon-row"><span>Unallocated Balances Pool</span><strong>£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">£ {temp_tx_funding:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding:,.2f}</strong></div>
