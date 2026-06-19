@@ -26,6 +26,7 @@ st.markdown("""
     .metric-value.blue { color: #3b82f6; }
     .metric-value.red { color: #ef4444; }
     .metric-value.green { color: #10b981; }
+    .metric-value.purple { color: #a78bfa; }
     
     /* Table Header Container with Top-Right Badges */
     .table-header-container {
@@ -154,7 +155,7 @@ def extract_break_row_data(df, search_keyword):
                 if search_keyword.lower() in str(df.iloc[r, c]).lower():
                     category = str(df.iloc[r, c]).strip()
                     val = df.iloc[r, c + 1]
-                    numeric_val = safe_float(val) if safe_float(val) is not None else 0.0
+                    numeric_val = safe_float(val)
                     tx = str(df.iloc[r, c + 2]).strip() if pd.notna(df.iloc[r, c + 2]) else "N/A"
                     action = str(df.iloc[r, c + 3]).strip() if pd.notna(df.iloc[r, c + 3]) else "N/A"
                     return {"Discrepancy Category": category, "Value / Discrepancy": numeric_val, "Key Transactions Source": tx, "Actions Planned / Taken": action}
@@ -236,6 +237,37 @@ def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, perf
     except:
         return {"Bank": bank_name, "Account": row_keyword, "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": entity_name, "Performed By": performed_by}
 
+# 🛠️ ΔΥΝΑΜΙΚΟΣ PARSER ΓΙΑ ΤΑ BREAK SECTIONS ΤΟΥ TAB 5
+def extract_tab5_break_section(df, header_keyword, num_rows=1):
+    try:
+        start_row = locate_row_index(df, header_keyword)
+        if start_row is None:
+            return pd.DataFrame()
+        
+        rows_list = []
+        for i in range(2, 2 + num_rows):
+            r = start_row + i
+            if r >= df.shape[0]:
+                break
+            
+            # Αν η γραμμή είναι κενή ή περιέχει το 'Tot', σταματάμε
+            if pd.isna(df.iloc[r, 0]) and pd.isna(df.iloc[r, 4]):
+                continue
+            if "tot" in str(df.iloc[r, 0]).lower() or "tot" in str(df.iloc[r, 5]).lower():
+                continue
+                
+            rows_list.append({
+                "Date": str(df.iloc[r, 0]).split()[0] if pd.notna(df.iloc[r, 0]) else "N/A",
+                "Break Details": str(df.iloc[r, 1]).strip() if pd.notna(df.iloc[r, 1]) else "N/A",
+                "Admin Link": str(df.iloc[r, 2]).strip() if pd.notna(df.iloc[r, 2]) else "N/A",
+                "Action Required": str(df.iloc[r, 3]).strip() if pd.notna(df.iloc[r, 3]) else "N/A",
+                "Jira Ticket": str(df.iloc[r, 4]).strip() if pd.notna(df.iloc[r, 4]) else "N/A",
+                "Amount": safe_float(df.iloc[r, 5]) if df.shape[1] > 5 else 0.0
+            })
+        return pd.DataFrame(rows_list)
+    except:
+        return pd.DataFrame()
+
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
 if "lisa_movements" not in st.session_state:
@@ -282,13 +314,12 @@ try:
     }
 
     # ==========================================
-    # 👑 TAB 1: SIGN OFF & OTHER CHECKS (LISA ABSOLUTE BOUNDS D50-D56 FIXED)
+    # 👑 TAB 1: SIGN OFF & OTHER CHECKS (ΚΛΕΙΔΩΜΕΝΟ)
     # ==========================================
     if selected_tab == "1. Sign Off & Other Checks":
         st.markdown("### Manual Combined User Balance Suite")
         df_tab1 = pd.read_excel(EXCEL_FILE, sheet_name="1. Sign Off & Other Checks", header=None)
         
-        # CISA Lookup
         cisa_prev = parse_live_value(df_tab1, "Internal CUB from previous day", 1, 2386124297.55)
         cisa_deb  = parse_live_value(df_tab1, "Debits (Recon data) from Rec data", 1, 10417421.49)
         cisa_cred = parse_live_value(df_tab1, "Credits (Recon data) from Rec data", 1, 11826133.22)
@@ -296,20 +327,19 @@ try:
         cisa_rec  = parse_live_value(df_tab1, "Internal CUB from Rec Date", 1, 2387533039.28)
         cisa_diff = parse_live_value(df_tab1, "Difference", 1, 0.00)
 
-        # 🔴 ΔΙΟΡΘΩΣΗ: Κλειδωμένα κελιά για το LISA απευθείας από τη στήλη D (index 3) και τις γραμμές 50 έως 56 (σειρές 49-55)
-        lisa_prev = safe_float(df_tab1.iloc[49, 3])  # D50
-        lisa_deb  = safe_float(df_tab1.iloc[50, 3])  # D51
-        lisa_cred = safe_float(df_tab1.iloc[51, 3])  # D52
-        lisa_tot  = safe_float(df_tab1.iloc[52, 3])  # D53
-        lisa_rec  = safe_float(df_tab1.iloc[54, 3])  # D55
-        lisa_diff = safe_float(df_tab1.iloc[55, 3])  # D56
+        lisa_prev = safe_float(df_tab1.iloc[49, 3])  
+        lisa_deb  = safe_float(df_tab1.iloc[50, 3])  
+        lisa_cred = safe_float(df_tab1.iloc[51, 3])  
+        lisa_tot  = safe_float(df_tab1.iloc[52, 3])  
+        lisa_rec  = safe_float(df_tab1.iloc[54, 3])  
+        lisa_diff = safe_float(df_tab1.iloc[55, 3])  
 
         col1, col2 = st.columns(2)
         with col1:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title" style="color: #a78bfa; font-weight: 700;">COMBINED USER BALANCE CHECK - CISA</div></div>
-                    <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ {cisa_prev:,.2f}</strong></div>
+                    <div class="recon-row"><span>Internal CUB from previous day</span>#<strong>£ {cisa_prev:,.2f}</strong></div>
                     <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ {cisa_deb:,.2f}</strong></div>
                     <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ {cisa_cred:,.2f}</strong></div>
                     <div class="recon-row total"><span style="color: #3b82f6;">Total</span><strong style="color: #3b82f6;">£ {cisa_tot:,.2f}</strong></div>
@@ -333,7 +363,7 @@ try:
             """, unsafe_allow_html=True)
 
     # ==========================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (ΚΛΕΙΔΩΜΕΝΟ)
     # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
@@ -394,50 +424,12 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        cisa_comment = parse_live_string(df_tab2, "CISA: Overall", 0, "CISA shortfalls logged in matrix.")
-        lisa_comment = parse_live_string(df_tab2, "LISA: Overall", 0, "LISA shortfalls logged in matrix.")
-        quai_comment = parse_live_string(df_tab2, "Quai: Overall", 0, "Quai surplus matching thresholds.")
-        add_comment  = parse_live_string(df_tab2, "Additional Comments", 1, "No secondary ledger comments.")
-        
-        st.markdown(f"""
-            <div class="reason-box" style="border-left-color: #3b82f6;">
-                <div class="reason-title">📋 REASON FOR INTERNAL MOVEMENTS & COMMENTARY</div>
-                <div class="reason-section" style="font-size:13px; color:#d1d5db; line-height:1.6;">
-                    <strong>CISA Internal Flows:</strong> {cisa_comment}<br><br>
-                    <strong>LISA Internal Flows:</strong> {lisa_comment}<br><br>
-                    <strong>Quai Settlement Rules:</strong> {quai_comment}<br><br>
-                    <strong>Additional Audit Comments:</strong> <em>{add_comment}</em>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("### 🏠 Live Treasury Audit Workspace")
-        audit_tab_cisa, audit_tab_lisa = st.tabs(["🚨 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
-        with audit_tab_cisa:
-            col_form, col_logs = st.columns([1, 2])
-            with col_form:
-                cisa_from = st.selectbox("From Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], key="cisa_from_sel")
-                cisa_to = st.selectbox("To Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], index=1, key="cisa_to_sel")
-                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="cisa_amt_zero")
-                cisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="cisa_reason_input")
-                if st.button("Commit to Audit Log", key="btn_commit_cisa"):
-                    if cisa_amount > 0 or cisa_reason:
-                        st.session_state.cisa_movements.append({"From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason if cisa_reason else "Manual adjustment"})
-                        st.rerun()
-            with col_logs:
-                if not st.session_state.cisa_movements: st.info("No active logs recorded for Cash ISA.")
-                else:
-                    for idx, entry in enumerate(st.session_state.cisa_movements):
-                        st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
-
         st.markdown("<br>### 🌐 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
-        
         with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (100% Live Copy Paste Cells C60-E62)", expanded=True):
             row_barclays = find_row_data_by_keyword_match(df_tab2, "90314552", "Barclays UK PLC", "Saveable Limited", "Quai - Cash Held")
             row_wf1      = find_row_data_by_keyword_match(df_tab2, "SAVEABLE LTD", "Winterfloods", "Saveable Limited", "Quai - Units Held")
             df_wf_block  = df_tab2.iloc[locate_row_index(df_tab2, "Winterfloods")+1:].reset_index(drop=True)
             row_wf2      = find_row_data_by_keyword_match(df_wf_block, "SAVEABLE LTD", "Winterfloods", "Saveable Limited", "Quai - Cash Held")
-            
             stocks_dynamic_df = pd.DataFrame([row_barclays, row_wf1, row_wf2])
             st.data_editor(stocks_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger_live")
 
@@ -445,7 +437,6 @@ try:
             quai_req = df_tab2.iloc[65, 10] if df_tab2.shape[0] > 65 and df_tab2.shape[1] > 10 else 3532196.96
             quai_res = df_tab2.iloc[66, 10] if df_tab2.shape[0] > 66 and df_tab2.shape[1] > 10 else 3532197.14
             quai_sh  = df_tab2.iloc[67, 10] if df_tab2.shape[0] > 67 and df_tab2.shape[1] > 10 else 0.18
-            
             quai_req_val = safe_float(quai_req)
             quai_res_val = safe_float(quai_res)
             quai_sh_val  = safe_float(quai_sh)
@@ -458,24 +449,20 @@ try:
                     <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
                 </div>
             """, unsafe_allow_html=True)
-            
             row_citi_eur = find_row_data_by_keyword_match(df_tab2, "14747763", "Citi Bank NA London", "Saveable Limited", "Quai - Cash Held")
             row_mmf1     = find_row_data_by_keyword_match(df_tab2, "Account Cash ISA", "Blackrock QMMF", "Saveable Limited", "Quai - Cash Held")
             row_mmf2     = find_row_data_by_keyword_match(df_tab2, "Lifetime Account Client Account", "Blackrock QMMF", "Saveable Limited", "Quai - Cash Held")
-            
             other_accounts_dynamic_df = pd.DataFrame([row_citi_eur, row_mmf1, row_mmf2])
             st.data_editor(other_accounts_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="other_client_money_live")
 
     # ==========================================
-    # 📈 TAB 3: UNALLOC REC
+    # 📈 TAB 3: UNALLOC REC (ΚΛΕΙΔΩΜΕΝΟ)
     # ==========================================
     elif selected_tab == "3. Unalloc Rec":
         st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
         df_tab3 = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
-        
         cisa_unalloc_tot = parse_live_value(df_tab3, "CISA total unallocated", 1, 294085.70)
         lisa_unalloc_tot = parse_live_value(df_tab3, "LISA total unallocated", 1, 163659.42)
-        
         cisa_b, lisa_b = compute_unalloc_aging_buckets(df_tab3)
 
         st.markdown(f"""
@@ -495,42 +482,33 @@ try:
 
         st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📊 LIVE UNALLOCATED FUNDS PORTFOLIO EXPOSURE (DAYS AGED)</div></div>", unsafe_allow_html=True)
         col_bar_left, col_bar_right = st.columns(2)
-        
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
             st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {cisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["0-2"] / max(1.0, cisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {cisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["3-5"] / max(1.0, cisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {cisa_b["6-9"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["6-9"] / max(1.0, cisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {cisa_b["10+"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["10+"] / max(1.0, cisa_unalloc_tot)))
-            
         with col_bar_right:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Lifetime ISA Aging Distribution</p>", unsafe_allow_html=True)
             st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {lisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["0-2"] / max(1.0, lisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {lisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["3-5"] / max(1.0, lisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {lisa_b["6-9"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["6-9"] / max(1.0, lisa_unalloc_tot)))
-            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {lisa_b["10+"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["10+"] / max(1.0, lisa_unalloc_tot)))
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ==========================================
-    # 🏛️ TAB 4: CISA - CASS INTERNAL REC
+    # 🏛️ TAB 4: CISA - CASS INTERNAL REC (ΚΛΕΙΔΩΜΕΝΟ)
     # ==========================================
     elif selected_tab == "4. CISA - CASS Internal Rec":
         df_tab4 = pd.read_excel(EXCEL_FILE, sheet_name="4. CISA - CASS Internal Rec", header=None)
-        
         row_shortfall_idx = locate_row_index(df_tab4, "Daily Surplus or Shortfall")
         shortfall_calculated  = parse_live_value(df_tab4, "Daily Surplus or Shortfall", 1, -4393.67)
         conclusion_excel_text = parse_dynamic_conclusion(df_tab4, row_shortfall_idx, default="Conclusion data not found.")
@@ -544,11 +522,9 @@ try:
         
         interest_due_raw = df_tab4.iloc[34, 4] if df_tab4.shape[0] > 34 and df_tab4.shape[1] > 4 else 0.0
         interest_due = safe_float(interest_due_raw)
-        
         final_client_money_req = subtotal_pre_interest + interest_due
 
-        st.markdown("### 📊 Internal Client Money Reconciliation (v4.1) - Cash ISA")
-
+        st.markdown("### 📊 Internal Client Money Reconciliation Suite (v4.1) - Cash ISA")
         st.markdown(f"""
             <div class="reason-box">
                 <div class="reason-title" style="color: #ef4444; font-size: 15px;">⚠️ Active Regulatory Target Status</div>
@@ -558,8 +534,6 @@ try:
                 </div>
             </div>
         """, unsafe_allow_html=True)
-
-        st.markdown('<div class="table-header-container"><div class="table-title">🚫 Dynamic Outstanding Breaks & Discrepancies Ledger</div></div>', unsafe_allow_html=True)
         row1 = extract_break_row_data(df_tab4, "User Credits/Surplus not applied to ledger")
         row2 = extract_break_row_data(df_tab4, "User Debits/Shortfall not applied to ledger")
         row3 = extract_break_row_data(df_tab4, "Bulk Ledger Credits/Surplus not applied to users")
@@ -568,8 +542,6 @@ try:
         st.data_editor(premium_breaks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="premium_breaks_table")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="table-header-container"><div class="table-title">🏛️ Client Money Requirement Calculation Engine</div></div>', unsafe_allow_html=True)
-        
         col_calc_left, col_calc_right = st.columns(2)
         with col_calc_left:
             st.markdown(f"""
@@ -590,16 +562,130 @@ try:
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding:,.2f}</strong></div>
                 </div>
             """, unsafe_allow_html=True)
-
         st.markdown(f"""
             <div class="workspace-card" style="margin-top:20px;">
                 <div class="recon-row" style="font-size:15px;"><span>Sub-Total Requirement (pre-Interest)</span><strong>£ {subtotal_pre_interest:,.2f}</strong></div>
-                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual</span><strong>£ {interest_due:,.2f}</strong></div>
+                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual (Cell E35)</span><strong>£ {interest_due:,.2f}</strong></div>
                 <div class="recon-row total" style="font-size:18px; color:#10b981; border-top:2px solid #1f2937; padding-top:15px;">
                     <span>🏛️ Final Client Money Requirement Target</span><strong>£ {final_client_money_req:,.2f}</strong>
                 </div>
             </div>
         """, unsafe_allow_html=True)
+
+    # =========================================================================================
+    # 👑 🔥 TAB 5: CISA INTERNAL CASH RECONCILIATION (WORKINGS - NEW ENTERPRISE LAYOUT)
+    # =========================================================================================
+    elif selected_tab == "5. CISA Internal Workings":
+        df_tab5 = pd.read_excel(EXCEL_FILE, sheet_name="5. CISA Internal Workings", header=None)
+        
+        # 📊 1. LIVE PARSING TOP OVERALL LEDGER BALANCE SUITE (image_3b6858.png)
+        row_bal_idx = locate_row_index(df_tab5, "Combined User Balance from Ledger vs Plum Ledger Balance")
+        
+        raw_cub  = df_tab5.iloc[row_bal_idx + 2, 2] if row_bal_idx is not None else 2387533039.28
+        raw_plum = df_tab5.iloc[row_bal_idx + 2, 3] if row_bal_idx is not None else 2390483188.37
+        raw_diff = df_tab5.iloc[row_bal_idx + 2, 4] if row_bal_idx is not None else 2950149.09
+        
+        cub_val  = safe_float(raw_cub)
+        plum_val = safe_float(raw_plum)
+        diff_val = safe_float(raw_diff)
+
+        st.markdown("### 🏛️ CISA Internal Cash Reconciliation Ledger (Workings)")
+        st.caption("FCA Compliance Working Papers mapping Internal Balance Controls.")
+
+        st.markdown(f"""
+            <div class="metric-grid">
+                <div class="metric-card"><div class="metric-label">COMBINED USER BALANCE (LEDGER)</div><div class="metric-value blue">£ {cub_val:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">PLUM LEDGER BALANCE</div><div class="metric-value purple">£ {plum_val:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">UNADJUSTED BALANCE DIFFERENCE</div><div class="metric-value red">£ {diff_val:,.2f}</div></div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # 📋 2. USER BALANCE / LEDGER ADJUSTMENTS FULL MATRIX (image_3b6858.png)
+        st.markdown('<div class="table-header-container"><div class="table-title">🔄 User Balance / Ledger Corrections & Adjustments Audit Log</div></div>', unsafe_allow_html=True)
+        
+        adj_start = locate_row_index(df_tab5, "User Balance / Ledger Adjustments")
+        adj_rows = []
+        if adj_start is not None:
+            for idx in range(adj_start + 2, adj_start + 18): # Διαβάζει live τις 16 καταχωρήσεις
+                if idx >= df_tab5.shape[0] or pd.isna(df_tab5.iloc[idx, 0]):
+                    continue
+                adj_rows.append({
+                    "Date/Break Type": str(df_tab5.iloc[idx, 0]).strip(),
+                    "D Date": str(df_tab5.iloc[idx, 1]).split()[0] if pd.notna(df_tab5.iloc[idx, 1]) else "N/A",
+                    "Product": str(df_tab5.iloc[idx, 2]).strip(),
+                    "Combined User Bal": safe_float(df_tab5.iloc[idx, 3]),
+                    "Plum Ledger Bal": safe_float(df_tab5.iloc[idx, 4]),
+                    "Commentary / Description": str(df_tab5.iloc[idx, 5]).strip() if pd.notna(df_tab5.iloc[idx, 5]) else "N/A",
+                    "Action Taken": str(df_tab5.iloc[idx, 6]).strip() if pd.notna(df_tab5.iloc[idx, 6]) else "N/A"
+                })
+        
+        adj_df = pd.DataFrame(adj_rows)
+        st.data_editor(adj_df, column_config={
+            "Combined User Bal": st.column_config.NumberColumn("Combined User Bal", format="£%,.2f"),
+            "Plum Ledger Bal": st.column_config.NumberColumn("Plum Ledger Bal", format="£%,.2f")
+        }, use_container_width=True, hide_index=True, key="tab5_adj_matrix")
+
+        # 📊 3. ADJUSTED RECONCILIATION SUMMARY ENGINE (image_3b6822.png)
+        st.markdown("<br>### 🎯 Adjusted Balance Targets & Compliance Reconciliation Summary", unsafe_allow_html=True)
+        row_adj_idx = locate_row_index(df_tab5, "Adjusted Combined User Balance from Ledger vs Plum Ledger Balance")
+        
+        adj_cub   = safe_float(df_tab5.iloc[row_adj_idx + 2, 2]) if row_adj_idx is not None else 2387522999.00
+        adj_plum  = safe_float(df_tab5.iloc[row_adj_idx + 2, 3]) if row_adj_idx is not None else 2390477301.00
+        adj_diff  = safe_float(df_tab5.iloc[row_adj_idx + 2, 4]) if row_adj_idx is not None else 2954301.75
+        sum_breaks= safe_float(df_tab5.iloc[row_adj_idx + 3, 4]) if row_adj_idx is not None else 2954301.75
+        tot_diff  = safe_float(df_tab5.iloc[row_adj_idx + 4, 4]) if row_adj_idx is not None else 0.0
+
+        col_left_adj, col_right_adj = st.columns(2)
+        with col_left_adj:
+            st.markdown(f"""
+                <div class="workspace-card">
+                    <div class="workspace-header"><div class="workspace-title">Adjusted Reconciliation Totals</div></div>
+                    <div class="recon-row"><span>Adjusted Combined User Balance</span><strong>£ {adj_cub:,.2f}</strong></div>
+                    <div class="recon-row"><span>Adjusted Plum Ledger Balance</span><strong>£ {adj_plum:,.2f}</strong></div>
+                    <div class="recon-row total"><span>Adjusted Diff Rec Pool</span><strong>£ {adj_diff:,.2f}</strong></div>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_right_adj:
+            st.markdown(f"""
+                <div class="workspace-card">
+                    <div class="workspace-header"><div class="workspace-title">FCA Audit Sign-Off Thresholds</div></div>
+                    <div class="recon-row"><span>Sum of Below Tracked Breaks</span><strong>£ {sum_breaks:,.2f}</strong></div>
+                    <div class="recon-row total" style="color: #10b981;">
+                        <span>✅ Total Net Difference Residual</span><strong>£ {tot_diff:,.2f}</strong>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # 🚫 4. FCA CATEGORIZED BREAKS DISCOVERY ENGINE (image_3b6822.png)
+        st.markdown("### 🔍 Categorized System Breaks & Audit Logs Expanse")
+        
+        with st.expander("💳 Bulk Ledger credits not applied to user balance (Live File Synced)", expanded=True):
+            credit_breaks_df = extract_tab5_break_section(df_tab5, "Bulk Ledger credits not applied to user balance", num_rows=2)
+            if not credit_breaks_df.empty:
+                st.data_editor(credit_breaks_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t5_cr_breaks")
+            else:
+                st.info("No active open credits recorded under this sub-category.")
+
+        with st.expander("💸 Bulk Ledger debits not applied to user balance"):
+            debit_breaks_df = extract_tab5_break_section(df_tab5, "Bulk Ledger debits not applied to user balance", num_rows=2)
+            if not debit_breaks_df.empty:
+                st.data_editor(debit_breaks_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t5_dr_breaks")
+            else:
+                st.info("No active open debits recorded under this sub-category.")
+
+        with st.expander("📈 User surplus not applied to bulk ledger"):
+            surplus_breaks_df = extract_tab5_break_section(df_tab5, "User surplus not applied to bulk ledger", num_rows=2)
+            if not surplus_breaks_df.empty:
+                st.data_editor(surplus_breaks_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t5_sur_breaks")
+            else:
+                st.info("No active customer surplus errors tracked.")
+
+        with st.expander("📉 User shortfall not applied to bulk ledger", expanded=True):
+            shortfall_breaks_df = extract_tab5_break_section(df_tab5, "User shortfall not applied to bulk ledger", num_rows=2)
+            if not shortfall_breaks_df.empty:
+                st.data_editor(shortfall_breaks_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t5_sh_breaks")
+            else:
+                st.info("No active shortfalls outstanding.")
 
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
@@ -607,7 +693,7 @@ try:
     else:
         st.markdown(f"### 📂 View Mode: {selected_tab}")
         try:
-            df_any = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
+            df_any = pd.read_excel(EXCEL_FILE, sheet_name=selected_tab, header=None)
             df_cleaned = df_any.dropna(how='all').dropna(axis=1, how='all').fillna("")
             st.dataframe(df_cleaned.astype(str), use_container_width=True, hide_index=True)
         except:
