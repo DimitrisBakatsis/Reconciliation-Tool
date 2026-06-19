@@ -332,7 +332,7 @@ try:
             """, unsafe_allow_html=True)
 
     # ==========================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (VLOOKUP SCAN FOR QUAI TARGETS FIX)
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
     # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
@@ -345,7 +345,6 @@ try:
         cisa_net_change = parse_live_value(df_tab2, "CISA Net Change", 1, -971704.00)
         lisa_net_change = parse_live_value(df_tab2, "LISA Net Change", 1, 610408.97)
 
-        # Top Metric Cards
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">TOTAL REQUIREMENT</div><div class="metric-value blue">£ {req_val:,.2f}</div></div>
@@ -416,7 +415,6 @@ try:
             st.data_editor(stocks_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger_live")
 
         with st.expander("🔑 Other Client Money Accounts & QMMF Liquid Reserves", expanded=True):
-            # 🔴 🔥 LIVE VLOOKUP SCAN ENGINE FOR CELLS K66-K68
             quai_req_val = 3532196.96
             quai_res_val = 3532197.14
             quai_sh_val  = 0.18
@@ -434,7 +432,7 @@ try:
             st.markdown(f"""
                 <div style="background-color: #11141d; padding: 15px; border-radius: 6px; border: 1px solid #1f2937; margin-bottom: 20px;">
                     <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS (LIVE CELLS K66-K68)</span><br>
-                    <div class="recon-row"><span>Requirement</span>#<strong>£ {quai_req_val:,.2f}</strong></div>
+                    <div class="recon-row"><span>Requirement</span><strong>£ {quai_req_val:,.2f}</strong></div>
                     <div class="recon-row"><span>Resource</span><strong>£ {quai_res_val:,.2f}</strong></div>
                     <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
                 </div>
@@ -558,12 +556,13 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-    # ==========================================
-    # 👑 🔥 TAB 5: CISA INTERNAL WORKINGS
-    # ==========================================
+    # =========================================================================================
+    # 👑 🔥 TAB 5: CISA INTERNAL WORKINGS (DATE/BREAK TYPE COLUMN EXCLUDED PERMANENTLY)
+    # =========================================================================================
     elif selected_tab == "5. CISA Internal Workings":
         df_tab5 = pd.read_excel(EXCEL_FILE, sheet_name="5. CISA Internal Workings", header=None)
         
+        # 📊 1. Top Core Metrics
         cub_raw = safe_float(df_tab5.iloc[9, 2]) if df_tab5.shape[0] > 9 else 2387533039.28
         plum_raw = safe_float(df_tab5.iloc[9, 3]) if df_tab5.shape[0] > 9 else 2390483188.37
         diff_raw = safe_float(df_tab5.iloc[9, 4]) if df_tab5.shape[0] > 9 else 2950149.09
@@ -579,22 +578,25 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
+        # 📋 2. User Balance Adjustments Table - WITHOUT Date/Break Type Column
+        st.markdown('<div class="table-header-container"><div class="table-title">🔄 User Balance / Ledger Corrections & Adjustments Audit Log</div></div>', unsafe_allow_html=True)
+        
         static_adj_data = [
-            {"Date/Break Type": "Aggregate Diff", "D Date": "2026-03-31", "Product": "CISA", "Combined User Bal": 15.91, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £15.91 due to Aggregate difference.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
-            {"Date/Break Type": "Aggregate Diff", "D Date": "2026-04-28", "Product": "CISA", "Combined User Bal": 1.21, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £1.21 due to Aggregate difference.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-05-15", "Product": "CISA", "Combined User Bal": -2634.00, "Plum Ledger Bal": -2634.00, "Commentary / Description": "Wealth ops: Amount of £2,634 transfer out marked as cancelled.", "Action Taken": "CASS Recs have chased Wops for an update 09/06."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-05-20", "Product": "CISA", "Combined User Bal": -59986.67, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth ops: Amount of £59,986.67 paid out, to be debited off unalloc.", "Action Taken": "CASS Recs have chased Wops for an update 09/06."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-05-21", "Product": "CISA", "Combined User Bal": 80.00, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £80 showing as a difference on aggregate debits.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-05-21", "Product": "CISA", "Combined User Bal": 62377.29, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth ops: Amount of £62,377.29 transfer in marked as cancelled.", "Action Taken": "CASS Recs have chased Wops for an update 09/06."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-05-21", "Product": "CISA", "Combined User Bal": 7555.56, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £7,555.56 unknown reconciliation difference.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-06-04", "Product": "CISA", "Combined User Bal": 0.50, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Aggregate difference of -8,508.50 on 04/06 due to Modulr.", "Action Taken": "To be investigated by CASS Recs and Engineering."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-06-08", "Product": "CISA", "Combined User Bal": 20050.00, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £20,050.00 showing as a difference on aggregate.", "Action Taken": "Engineering to investigate and solve the difference."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-06-08", "Product": "CISA", "Combined User Bal": -20988.41, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth ops: Amount of £20,988.41 left the bank but transfer errored.", "Action Taken": "Wealth Ops to resolve with review."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-06-09", "Product": "CISA", "Combined User Bal": -20000.00, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth ops: Amount of £20,000 has been added to Unalloc in error.", "Action Taken": "Wealth Ops investigating, awaiting amount to be debited."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": -18184.43, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth Ops: Amount of £18,184.43 has been credited to unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 21672.66, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth Ops: Amount of £21,672.66 has been debited from unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 0.0, "Plum Ledger Bal": -18184.43, "Commentary / Description": "Amount of £18,184.43 has debited the bank however no ledger entry.", "Action Taken": "To be backfilled by CASS team 17/06."},
-            {"Date/Break Type": "Transfer", "D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 0.0, "Plum Ledger Bal": 14930.71, "Commentary / Description": "Wealth Ops: Amount of £14,930.71 has been credited to unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."}
+            {"D Date": "2026-03-31", "Product": "CISA", "Combined User Bal": 15.91, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £15.91 due to Aggregate difference.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
+            {"D Date": "2026-04-28", "Product": "CISA", "Combined User Bal": 1.21, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £1.21 due to Aggregate difference.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
+            {"D Date": "2026-05-15", "Product": "CISA", "Combined User Bal": -2634.00, "Plum Ledger Bal": -2634.00, "Commentary / Description": "Wealth ops: Amount of £2,634 transfer out marked as cancelled.", "Action Taken": "CASS Recs have chased Wops for an update 09/06."},
+            {"D Date": "2026-05-20", "Product": "CISA", "Combined User Bal": -59986.67, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth ops: Amount of £59,986.67 paid out, to be debited off unalloc.", "Action Taken": "CASS Recs have chased Wops for an update 09/06."},
+            {"D Date": "2026-05-21", "Product": "CISA", "Combined User Bal": 80.00, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £80 showing as a difference on aggregate debits.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
+            {"D Date": "2026-05-21", "Product": "CISA", "Combined User Bal": 62377.29, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth ops: Amount of £62,377.29 transfer in marked as cancelled.", "Action Taken": "CASS Recs have chased Wops for an update 09/06."},
+            {"D Date": "2026-05-21", "Product": "CISA", "Combined User Bal": 7555.56, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £7,555.56 unknown reconciliation difference.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
+            {"D Date": "2026-06-04", "Product": "CISA", "Combined User Bal": 0.50, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Aggregate difference of -8,508.50 on 04/06 due to Modulr.", "Action Taken": "To be investigated by CASS Recs and Engineering."},
+            {"D Date": "2026-06-08", "Product": "CISA", "Combined User Bal": 20050.00, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £20,050.00 showing as a difference on aggregate.", "Action Taken": "Engineering to investigate and solve the difference."},
+            {"D Date": "2026-06-08", "Product": "CISA", "Combined User Bal": -20988.41, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth ops: Amount of £20,988.41 left the bank but transfer errored.", "Action Taken": "Wealth Ops to resolve with review."},
+            {"D Date": "2026-06-09", "Product": "CISA", "Combined User Bal": -20000.00, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth ops: Amount of £20,000 has been added to Unalloc in error.", "Action Taken": "Wealth Ops investigating, awaiting amount to be debited."},
+            {"D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": -18184.43, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth Ops: Amount of £18,184.43 has been credited to unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."},
+            {"D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 21672.66, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth Ops: Amount of £21,672.66 has been debited from unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."},
+            {"D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 0.0, "Plum Ledger Bal": -18184.43, "Commentary / Description": "Amount of £18,184.43 has debited the bank however no ledger entry.", "Action Taken": "To be backfilled by CASS team 17/06."},
+            {"D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 0.0, "Plum Ledger Bal": 14930.71, "Commentary / Description": "Wealth Ops: Amount of £14,930.71 has been credited to unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."}
         ]
         st.data_editor(pd.DataFrame(static_adj_data), column_config={
             "Combined User Bal": st.column_config.NumberColumn("Combined User Bal", format="£%,.2f"),
@@ -612,7 +614,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Adjusted Reconciliation Totals</div></div>
-                    <div class="recon-row"><span>Adjusted Combined User Balance</span>export <strong>£ {adj_cub if adj_cub != 0.0 else 2387522999.00:,.2f}</strong></div>
+                    <div class="recon-row"><span>Adjusted Combined User Balance</span><strong>£ {adj_cub if adj_cub != 0.0 else 2387522999.00:,.2f}</strong></div>
                     <div class="recon-row"><span>Adjusted Plum Ledger Balance</span><strong>£ {adj_plum if adj_plum != 0.0 else 2390477301.00:,.2f}</strong></div>
                     <div class="recon-row total"><span>Adjusted Diff Rec Pool</span><strong>£ {adj_diff if adj_diff != 0.0 else 2954301.75:,.2f}</strong></div>
                 </div>
