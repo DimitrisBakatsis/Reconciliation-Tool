@@ -24,6 +24,7 @@ st.markdown("""
     .metric-value { font-size: 24px; font-weight: 700; }
     .metric-value.blue { color: #3b82f6; }
     .metric-value.red { color: #ef4444; }
+    .metric-value.green { color: #10b981; }
     
     /* Table Header Container with Top-Right Badges */
     .table-header-container {
@@ -48,6 +49,7 @@ st.markdown("""
     }
     .net-change-badge.red { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
     .net-change-badge.green { background-color: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .net-change-badge.orange { background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
 
     .workspace-card { background-color: #0d0f16; border: 1px solid #1f2937; border-radius: 8px; padding: 24px; margin-bottom: 20px; }
     .workspace-header { border-bottom: 1px solid #1f2937; padding-bottom: 14px; margin-bottom: 20px; }
@@ -86,16 +88,9 @@ st.markdown("""
     .log-text { font-size: 14px; color: #ffffff; font-weight: 500; }
     .log-amount { font-size: 15px; font-weight: 700; color: #10b981; white-space: nowrap; }
     
-    /* Form Custom Inputs Styling */
-    div[data-testid="stSelectbox"] > label, div[data-testid="stNumberInput"] > label, div[data-testid="stTextInput"] > label {
-        color: #ffffff !important; font-size: 13px !important; font-weight: 600 !important; margin-bottom: 6px !important;
-    }
-    div[data-testid="stSelectbox"] div[data-baseweb="select"], div[data-testid="stNumberInput"] input, div[data-testid="stTextInput"] input {
-        background-color: #1a1c24 !important; border: 1px solid #2d3748 !important; color: #ffffff !important; border-radius: 6px !important;
-    }
-    .stButton > button {
-        background-color: #1a1c24 !important; color: #ffffff !important; border: 1px solid #4a5568 !important; border-radius: 6px !important; padding: 6px 16px !important; font-size: 13px !important;
-    }
+    /* Custom CSS Aging Bars Layout */
+    .aging-bar-wrapper { margin-bottom: 15px; }
+    .aging-bar-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #d1d5db; }
     
     /* PDF Bottom Floating Container */
     .pdf-container {
@@ -121,7 +116,6 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# Αρχικοποίηση session states για τα Live Logs του Commentary Suite
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
 if "lisa_movements" not in st.session_state:
@@ -153,7 +147,6 @@ try:
         "15. Reconciliation actions (aut"
     ]
     
-    # ΦΙΛΤΡΑΡΙΣΜΑ: Αποκλείουμε μόνο τα 5 κίτρινα
     excluded_yellow_sheets = ["Unalloc_Data", "CISA Funding", "LISA Funding", "CISA Breaks", "LISA Breaks"]
     filtered_menu = [item for item in full_menu_options if item not in excluded_yellow_sheets]
     
@@ -165,11 +158,7 @@ try:
     st.sidebar.markdown("<div class='sidebar-custom-title'>NAVIGATION SUITE</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<div class='sidebar-input-label'>Select Worksheet:</div>", unsafe_allow_html=True)
     
-    selected_tab = st.sidebar.radio(
-        "Worksheet Selector", 
-        filtered_menu, 
-        label_visibility="collapsed"
-    )
+    selected_tab = st.sidebar.radio("Worksheet Selector", filtered_menu, label_visibility="collapsed")
 
     # --- MAIN GLOBAL HEADER ---
     st.markdown("<div class='main-header'>CASS Reconciliation & Daily Client Money Reporting</div>", unsafe_allow_html=True)
@@ -179,6 +168,8 @@ try:
         "Previous Day Balance": st.column_config.NumberColumn("Previous Day Balance", format="£%,.2f"),
         "COB Balance": st.column_config.NumberColumn("COB Balance", format="£%,.2f"),
         "Variance": st.column_config.NumberColumn("Variance", format="£%,.2f"),
+        "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
+        "Payin Amount": st.column_config.NumberColumn("Payin Amount", format="£%,.2f"),
     }
 
     # ==========================================
@@ -186,7 +177,6 @@ try:
     # ==========================================
     if selected_tab == "1. Sign Off & Other Checks":
         st.markdown("### Manual Combined User Balance Suite")
-        
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("""
@@ -201,7 +191,6 @@ try:
                     <div class="recon-row difference"><span>Difference</span><strong>£ 0.00</strong></div>
                 </div>
             """, unsafe_allow_html=True)
-            
         with col2:
             st.markdown("""
                 <div class="workspace-card">
@@ -220,37 +209,17 @@ try:
     # 📊 VIEW: 2. DAILY CLIENT MONEY REPORT
     # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
-        # 1. KPI Cards
         st.markdown(f"""
             <div class="metric-grid">
-                <div class="metric-card">
-                    <div class="metric-label">Total Requirement</div>
-                    <div class="metric-value blue">£ 2,613,002,693.98</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Resource</div>
-                    <div class="metric-value blue">£ 2,612,998,056.86</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Shortfall / Surplus</div>
-                    <div class="metric-value red">£ -4,636.94</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Net ISA Change</div>
-                    <div class="metric-value red">£ -361,295.03</div>
-                </div>
+                <div class="metric-card"><div class="metric-label">Total Requirement</div><div class="metric-value blue">£ 2,613,002,693.98</div></div>
+                <div class="metric-card"><div class="metric-label">Resource</div><div class="metric-value blue">£ 2,612,998,056.86</div></div>
+                <div class="metric-card"><div class="metric-label">Shortfall / Surplus</div><div class="metric-value red">£ -4,636.94</div></div>
+                <div class="metric-card"><div class="metric-label">Net ISA Change</div><div class="metric-value red">£ -361,295.03</div></div>
             </div>
         """, unsafe_allow_html=True)
         
         st.markdown("### Client Money Balances & Asset Ledger Suite")
-
-        # Cash ISA Table
-        st.markdown("""
-            <div class="table-header-container">
-                <div class="table-title">Cash ISA Client Money Balances - GBP</div>
-                <div class="net-change-badge red">CISA Net Change: -£971,704.00</div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="table-header-container"><div class="table-title">Cash ISA Client Money Balances - GBP</div><div class="net-change-badge red">CISA Net Change: -£971,704.00</div></div>', unsafe_allow_html=True)
         
         cash_isa_df = pd.DataFrame([
             {"Bank": "Citi Bank NA London", "Account": "Saveable Cash ISA UK Client Money (14747801)", "Previous Day Balance": 176992857.0, "COB Balance": 176021153.0, "Variance": -971704.0, "Entity": "Saveable Limited"},
@@ -261,14 +230,7 @@ try:
         ])
         st.data_editor(cash_isa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="cash_isa_grid")
         
-        # Lifetime ISA Table
-        st.markdown("""
-            <div class="table-header-container">
-                <div class="table-title">Lifetime ISA Client Money Balances - GBP</div>
-                <div class="net-change-badge green">LISA Net Change: +£610,408.97</div>
-            </div>
-        """, unsafe_allow_html=True)
-        
+        st.markdown('<div class="table-header-container"><div class="table-title">Lifetime ISA Client Money Balances - GBP</div><div class="net-change-badge green">LISA Net Change: +£610,408.97</div></div>', unsafe_allow_html=True)
         lisa_df = pd.DataFrame([
             {"Bank": "CitiBank NA London", "Account": "Saveable Lifetime ISA UK Client Money (15242487)", "Previous Day Balance": 38363170.0, "COB Balance": 38973579.0, "Variance": 610408.97, "Entity": "Saveable Limited"},
             {"Bank": "Lloyds Bank Plc", "Account": "Saveable Lifetime ISA Client Account (27561260)", "Previous Day Balance": 714980.0, "COB Balance": 714980.0, "Variance": 0.0, "Entity": "Saveable Limited"},
@@ -277,99 +239,141 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        # 📋 Grey Summary Box
         st.markdown("""
             <div class="reason-box">
                 <div class="reason-title">📋 Reason for internal movements & Commentary</div>
-                <div class="reason-section">
-                    <strong>CISA: Overall Shortfall of £4,393.67</strong><br>
-                    • Amount of £4,393.67 residual interest paid to users as part of the transfer out process.<br>
-                    • To be moved from CISA corporate interest to CM 17/06.
-                </div>
-                <div class="reason-section">
-                    <strong>LISA: Overall Shortfall of £243.63</strong><br>
-                    • Amount of £243.63 residual interest paid to users as part of the transfer out process.<br>
-                    • To be moved from LISA corporate interest to CM 17/06.
-                </div>
-                <div class="reason-section" style="margin-bottom: 0;">
-                    <strong>Quai: Overall Surplus of £0.18</strong><br>
-                    • Quai to arrange amount to written off 17/06.
-                </div>
+                <div class="reason-section"><strong>CISA: Overall Shortfall of £4,393.67</strong><br>• Amount of £4,393.67 residual interest paid to users as part of the transfer out process.<br>• To be moved from CISA corporate interest to CM 17/06.</div>
+                <div class="reason-section"><strong>LISA: Overall Shortfall of £243.63</strong><br>• Amount of £243.63 residual interest paid to users as part of the transfer out process.<br>• To be moved from LISA corporate interest to CM 17/06.</div>
+                <div class="reason-section" style="margin-bottom: 0;"><strong>Quai: Overall Surplus of £0.18</strong><br>• Quai to arrange amount to written off 17/06.</div>
             </div>
         """, unsafe_allow_html=True)
 
-        # 🏁 LIVE TREASURY AUDIT WORKSPACE
+        # Live Treasury Workspace
         st.markdown("### ✍️ Live Treasury Audit Workspace")
-        cisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"]
-        lisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"]
-        
         audit_tab_cisa, audit_tab_lisa = st.tabs(["🔒 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
-        
         with audit_tab_cisa:
-            st.markdown("<br>", unsafe_allow_html=True)
             col_form, col_logs = st.columns([1, 2])
             with col_form:
-                cisa_from = st.selectbox("From Account", cisa_accounts, key="cisa_from_sel")
-                cisa_to = st.selectbox("To Account", cisa_accounts, index=1, key="cisa_to_sel")
+                cisa_from = st.selectbox("From Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], key="cisa_from_sel")
+                cisa_to = st.selectbox("To Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], index=1, key="cisa_to_sel")
                 cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="cisa_amt_zero")
-                cisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="cisa_reason_input")
+                cisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement...", key="cisa_reason_input")
                 if st.button("Commit to Audit Log", key="btn_commit_cisa"):
                     if cisa_amount > 0 or cisa_reason:
                         st.session_state.cisa_movements.append({"From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason if cisa_reason else "Manual adjustment"})
                         st.rerun()
             with col_logs:
-                if not st.session_state.cisa_movements:
-                    st.info("No active logs recorded for Cash ISA.")
+                if not st.session_state.cisa_movements: st.info("No active logs recorded.")
                 else:
                     for idx, entry in enumerate(st.session_state.cisa_movements):
-                        st.markdown(f"""
-                            <div class="log-card">
-                                <div class="log-details">
-                                    <div class="log-meta">🔄 FROM {entry['From']} ➜ TO {entry['To']}</div>
-                                    <div class="log-text">{entry['Reason']}</div>
-                                </div>
-                                <div class="log-amount">{entry['Amount']}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
                         if st.button(f"🗑 Remove Entry", key=f"del_cisa_{idx}"):
                             st.session_state.cisa_movements.pop(idx)
                             st.rerun()
 
         with audit_tab_lisa:
-            st.markdown("<br>", unsafe_allow_html=True)
             col_form_l, col_logs_l = st.columns([1, 2])
             with col_form_l:
-                lisa_from = st.selectbox("From Account", lisa_accounts, key="lisa_from_sel")
-                lisa_to = st.selectbox("To Account", lisa_accounts, index=1, key="lisa_to_sel")
+                lisa_from = st.selectbox("From Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"], key="lisa_from_sel")
+                lisa_to = st.selectbox("To Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"], index=1, key="lisa_to_sel")
                 lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="lisa_amt_zero")
-                lisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="lisa_reason_input")
+                lisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement...", key="lisa_reason_input")
                 if st.button("Commit to Audit Log", key="btn_commit_lisa"):
                     if lisa_amount > 0 or lisa_reason:
                         st.session_state.lisa_movements.append({"From": lisa_from, "To": lisa_to, "Amount": f"£{lisa_amount:,.2f}", "Reason": lisa_reason if lisa_reason else "Manual adjustment"})
                         st.rerun()
             with col_logs_l:
-                if not st.session_state.lisa_movements:
-                    st.info("No active logs recorded for Lifetime ISA.")
+                if not st.session_state.lisa_movements: st.info("No active logs recorded.")
                 else:
                     for idx, entry in enumerate(st.session_state.lisa_movements):
-                        st.markdown(f"""
-                            <div class="log-card">
-                                <div class="log-details">
-                                    <div class="log-meta">🔄 FROM {entry['From']} ➜ TO {entry['To']}</div>
-                                    <div class="log-text">{entry['Reason']}</div>
-                                </div>
-                                <div class="log-amount">{entry['Amount']}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
                         if st.button(f"🗑️ Remove Entry", key=f"del_lisa_{idx}"):
                             st.session_state.lisa_movements.pop(idx)
                             st.rerun()
 
-        # Expandable Sub-Ledgers
-        st.markdown("<br>### 🔍 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
-        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown"):
-            stocks_df = pd.DataFrame([{"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys", "Previous Day Balance": 1912753.33, "COB Balance": 1413133.97, "Variance": -499619.0, "Performed By": "Quai - Cash Held"}])
-            st.data_editor(stocks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_grid")
+    # ==========================================
+    # 📈 🔥 NEW PREMIUM VIEW: 3. UNALLOC REC
+    # ==========================================
+    elif selected_tab == "3. Unalloc Rec":
+        st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
+        st.caption("Transactions temporarily held in Unallocated Trust Accounts. CASS rule: Must be allocated inside 10 business days.")
+        
+        # --- 1. ENTERPRISE LOOK METRIC CARDS ---
+        st.markdown(f"""
+            <div class="metric-grid">
+                <div class="metric-card"><div class="metric-label">CISA Total Unallocated</div><div class="metric-value green">£ 277,834.89</div></div>
+                <div class="metric-card"><div class="metric-label">LISA Total Unallocated</div><div class="metric-value red">£ 126,146.45</div></div>
+                <div class="metric-card"><div class="metric-label">CISA Status Threshold</div><div class="metric-value green" style="font-size:14px; padding-top:8px;">✅ Within Tolerance Level (0.025%)</div></div>
+                <div class="metric-card"><div class="metric-label">LISA Status Threshold</div><div class="metric-value red" style="font-size:14px; padding-top:8px;">⚠️ Above Tolerance Level (0.025%)</div></div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # --- 2. PREMIUM VISUAL AGING BARS (ΟΠΩΣ ΣΤΑ ΜΕΓΑΛΑ RECON TOOLS) ---
+        st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📊 Unallocated Funds Portfolio Exposure (Days Aged)</div></div>", unsafe_allow_html=True)
+        
+        col_bar_left, col_bar_right = st.columns(2)
+        
+        # Υπολογισμός ποσοστών βάσει των αξιών του Excel: 0-2 d: 128572.33, 3-5 d: 197710.66, 6-9 d: 74214.66, 10+ d: 3483.69
+        with col_bar_left:
+            st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
+            # 0-2 Days (Πράσινο)
+            st.markdown('<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ 128,572.33 (46.2%)</span></div></div>', unsafe_allow_html=True)
+            st.progress(0.46)
+            # 3-5 Days (Κίτρινο)
+            st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Workload)</span><span>£ 110,344.00 (39.7%)</span></div></div>', unsafe_allow_html=True)
+            st.progress(0.39)
+            # 6-9 Days (Πορτοκαλί)
+            st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ 38,918.56 (14.0%)</span></div></div>', unsafe_allow_html=True)
+            st.progress(0.14)
+            # 10+ Days (Κόκκινο Breach)
+            st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ 0.00 (0.0%)</span></div></div>', unsafe_allow_html=True)
+            st.progress(0.0)
+
+        with col_bar_right:
+            st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Lifetime ISA Aging Distribution</p>", unsafe_allow_html=True)
+            # 0-2 Days (Πράσινο)
+            st.markdown('<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ 0.00 (0.0%)</span></div></div>', unsafe_allow_html=True)
+            st.progress(0.0)
+            # 3-5 Days (Κίτρινο)
+            st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Workload)</span><span>£ 87,366.66 (69.2%)</span></div></div>', unsafe_allow_html=True)
+            st.progress(0.69)
+            # 6-9 Days (Πορτοκαλί)
+            st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ 35,296.10 (28.0%)</span></div></div>', unsafe_allow_html=True)
+            st.progress(0.28)
+            # 10+ Days (Κόκκινο Breach)
+            st.markdown('<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ 3,483.69 (2.8%)</span></div></div>', unsafe_allow_html=True)
+            st.progress(0.02)
+            
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # --- 3. STRUCTURED DATA TABLES WITH AGING BADGES ---
+        # CISA Table
+        st.markdown('<div class="table-header-container"><div class="table-title">CISA Unallocated Breakdown (Looker Live Sync)</div><div class="net-change-badge green">Looker Match: £277,834.89</div></div>', unsafe_allow_html=True)
+        cisa_unalloc_df = pd.DataFrame([
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019eb1df-f256...", "Date Created": "10/06/2026", "Type": "credit", "Amount": 29997.68, "Product": "cash_isa", "Provider ID": "e3a88178-e782...", "Days Aged": 7, "Breach Notes": "N/A"},
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ebb89-c0a2...", "Date Created": "11/06/2026", "Type": "credit", "Amount": 18184.43, "Product": "cash_isa", "Provider ID": "8a36818d-cb4b...", "Days Aged": 6, "Breach Notes": "N/A"},
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ecb84-c843...", "Date Created": "15/06/2026", "Type": "credit", "Amount": 64323.37, "Product": "cash_isa", "Provider ID": "7937e99a-a2d9...", "Days Aged": 4, "Breach Notes": "N/A"},
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ed024-854b...", "Date Created": "16/06/2026", "Type": "credit", "Amount": 21471.6, "Product": "cash_isa", "Provider ID": "228cd2f5-1ee0...", "Days Aged": 3, "Breach Notes": "N/A"},
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ed024-873d...", "Date Created": "16/06/2026", "Type": "credit", "Amount": 20918.18, "Product": "cash_isa", "Provider ID": "a7a2dae7-bd10...", "Days Aged": 3, "Breach Notes": "N/A"}
+        ])
+        st.data_editor(cisa_unalloc_df, column_config={
+            "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
+            "Days Aged": st.column_config.NumberColumn("Days Aged", help="CASS limit: 10 days max")
+        }, use_container_width=True, hide_index=True, key="cisa_unalloc_editor")
+
+        # LISA Table
+        st.markdown('<div class="table-header-container" style="margin-top:25px;"><div class="table-title">LISA Unallocated Breakdown (Looker Live Sync)</div><div class="net-change-badge red">Looker Match: £126,146.45</div></div>', unsafe_allow_html=True)
+        lisa_unalloc_df = pd.DataFrame([
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "0199818b-0e35...", "Date Created": "25/09/2025", "Type": "credit", "Amount": 25.82, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 191, "Breach Notes": "Breach raised 09/10"},
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019a285f-0027...", "Date Created": "27/10/2025", "Type": "credit", "Amount": 39.36, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 169, "Breach Notes": "Breach raised 09/10"},
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019cc022-3aa7...", "Date Created": "28/01/2026", "Type": "credit", "Amount": 1250.50, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 102, "Breach Notes": "Breach raised 09/10"},
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019e9e8e-9ac8...", "Date Created": "27/02/2026", "Type": "credit", "Amount": 2168.01, "Product": "lisa", "Provider ID": "Internal Match", "Days Aged": 80, "Breach Notes": "Breach raised 09/10"},
+            {"User ID": "73df5aae-f42a...", "Ledger Entry ID": "019ead2b-a847...", "Date Created": "09/06/2026", "Type": "credit", "Amount": 28032.55, "Product": "lisa", "Provider ID": "ffe80a3e-ca2c...", "Days Aged": 8, "Breach Notes": "N/A"}
+        ])
+        st.data_editor(lisa_unalloc_df, column_config={
+            "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
+            "Days Aged": st.column_config.NumberColumn("Days Aged", help="CASS limit: 10 days max")
+        }, use_container_width=True, hide_index=True, key="lisa_unalloc_editor")
 
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
@@ -382,11 +386,10 @@ try:
         except:
             st.warning("Sheet data fetched live from backend template storage.")
 
-    # 🏁 ΕΠΑΝΑΦΟΡΑ ΚΟΥΜΠΙΟΥ: EXPORT TO PDF (Στο κάτω μέρος της σελίδας)
+    # 🏁 GLOBAL PDF EXPORT BUTTON
     st.markdown("<div class='pdf-container'>", unsafe_allow_html=True)
     if st.button("📄 Export to PDF", key="btn_export_global_pdf"):
         st.toast("Generating financial audit report PDF...", icon="🔄")
-        # Εδώ μελλοντικά συνδέεις τη βιβλιοθήκη reportlab ή fpdf
     st.markdown("</div>", unsafe_allow_html=True)
 
 except Exception as e:
