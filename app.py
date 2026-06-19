@@ -547,7 +547,7 @@ try:
         
         final_client_money_req = subtotal_pre_interest + interest_due
 
-        st.markdown("### 📊 Internal Client Money Reconciliation Suite (v4.1) - Cash ISA")
+        st.markdown("### 📊 Internal Client Money Reconciliation (v4.1) - Cash ISA")
         st.caption("FCA Compliance Ledger Verification according to CASS 7.16.22 Rules.")
 
         st.markdown(f"""
