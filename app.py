@@ -237,6 +237,29 @@ def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, perf
     except:
         return {"Bank": bank_name, "Account": row_keyword, "Previous Day Balance": 0.0, "COB Balance": 0.0, "Variance": 0.0, "Entity": entity_name, "Performed By": performed_by}
 
+# 🛠️ DYNAMIC CELL LOOKUP ENGINE FOR TAB 6 EXTERNAL RECONCILIATION DATA
+def find_tab6_row_data(df, target_account, default_internal=0.0, default_external=0.0):
+    try:
+        for r in range(df.shape[0]):
+            row_txt = " ".join([str(df.iloc[r, c]).strip() for c in range(df.shape[1]) if pd.notna(df.iloc[r, c])])
+            if target_account.lower() in row_txt.lower():
+                numbers = []
+                for col in range(df.shape[1]):
+                    cell = df.iloc[r, col]
+                    if pd.notna(cell) and isinstance(cell, (int, float)):
+                        numbers.append(float(cell))
+                    elif pd.notna(cell) and any(char.isdigit() for char in str(cell)) and not ("769" in str(cell)):
+                        num_parsed = safe_float(cell)
+                        if num_parsed != 0.0:
+                            numbers.append(num_parsed)
+                
+                internal = numbers[0] if len(numbers) > 0 else default_internal
+                external = numbers[1] if len(numbers) > 1 else default_external
+                return internal, external, external - internal
+        return default_internal, default_external, default_external - default_internal
+    except:
+        return default_internal, default_external, default_external - default_internal
+
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
 if "lisa_movements" not in st.session_state:
@@ -279,7 +302,10 @@ try:
         "Variance": st.column_config.NumberColumn("Variance", format="£%,.2f"),
         "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
         "Payin Amount": st.column_config.NumberColumn("Payin Amount", format="£%,.2f"),
-        "Value / Discrepancy": st.column_config.NumberColumn("Value / Discrepancy", format="£%,.2f")
+        "Value / Discrepancy": st.column_config.NumberColumn("Value / Discrepancy", format="£%,.2f"),
+        "Internal Holdings (Ledger)": st.column_config.NumberColumn("Internal Holdings (Ledger)", format="£%,.2f"),
+        "External Holdings Statement": st.column_config.NumberColumn("External Holdings Statement", format="£%,.2f"),
+        "Difference": st.column_config.NumberColumn("Difference", format="£%,.2f")
     }
 
     # ==========================================
@@ -431,7 +457,7 @@ try:
 
             st.markdown(f"""
                 <div style="background-color: #11141d; padding: 15px; border-radius: 6px; border: 1px solid #1f2937; margin-bottom: 20px;">
-                    <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS</span><br>
+                    <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS (LIVE CELLS K66-K68)</span><br>
                     <div class="recon-row"><span>Requirement</span><strong>£ {quai_req_val:,.2f}</strong></div>
                     <div class="recon-row"><span>Resource</span><strong>£ {quai_res_val:,.2f}</strong></div>
                     <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
@@ -549,20 +575,19 @@ try:
         st.markdown(f"""
             <div class="workspace-card" style="margin-top:20px;">
                 <div class="recon-row" style="font-size:15px;"><span>Sub-Total Requirement (pre-Interest)</span><strong>£ {subtotal_pre_interest:,.2f}</strong></div>
-                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual</span><strong>£ {interest_due:,.2f}</strong></div>
+                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual (Cell E35)</span><strong>£ {interest_due:,.2f}</strong></div>
                 <div class="recon-row total" style="font-size:18px; color:#10b981; border-top:2px solid #1f2937; padding-top:15px;">
                     <span>🏛️ Final Client Money Requirement Target</span><strong>£ {final_client_money_req:,.2f}</strong>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-    # =========================================================================================
-    # 👑 🔥 TAB 5: CISA INTERNAL WORKINGS (DATE/BREAK TYPE COLUMN EXCLUDED PERMANENTLY)
-    # =========================================================================================
+    # ==========================================
+    # 🏛️ TAB 5: CISA INTERNAL WORKINGS
+    # ==========================================
     elif selected_tab == "5. CISA Internal Workings":
         df_tab5 = pd.read_excel(EXCEL_FILE, sheet_name="5. CISA Internal Workings", header=None)
         
-        # 📊 1. Top Core Metrics
         cub_raw = safe_float(df_tab5.iloc[9, 2]) if df_tab5.shape[0] > 9 else 2387533039.28
         plum_raw = safe_float(df_tab5.iloc[9, 3]) if df_tab5.shape[0] > 9 else 2390483188.37
         diff_raw = safe_float(df_tab5.iloc[9, 4]) if df_tab5.shape[0] > 9 else 2950149.09
@@ -578,9 +603,6 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 📋 2. User Balance Adjustments Table - WITHOUT Date/Break Type Column
-        st.markdown('<div class="table-header-container"><div class="table-title">🔄 User Balance / Ledger Corrections & Adjustments Audit Log</div></div>', unsafe_allow_html=True)
-        
         static_adj_data = [
             {"D Date": "2026-03-31", "Product": "CISA", "Combined User Bal": 15.91, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £15.91 due to Aggregate difference.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
             {"D Date": "2026-04-28", "Product": "CISA", "Combined User Bal": 1.21, "Plum Ledger Bal": 0.0, "Commentary / Description": "Engineering: Amount of £1.21 due to Aggregate difference.", "Action Taken": "CASS Recs have chased Engineering for an update 02/06."},
@@ -596,7 +618,7 @@ try:
             {"D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": -18184.43, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth Ops: Amount of £18,184.43 has been credited to unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."},
             {"D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 21672.66, "Plum Ledger Bal": 0.0, "Commentary / Description": "Wealth Ops: Amount of £21,672.66 has been debited from unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."},
             {"D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 0.0, "Plum Ledger Bal": -18184.43, "Commentary / Description": "Amount of £18,184.43 has debited the bank however no ledger entry.", "Action Taken": "To be backfilled by CASS team 17/06."},
-            {"D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 0.0, "Plum Ledger Bal": 14930.71, "Commentary / Description": "Wealth Ops: Amount of £14,930.71 has been credited to unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."}
+            {"Date/Break Type": "Transfer", "D Date": "2026-06-16", "Product": "CISA", "Combined User Bal": 0.0, "Plum Ledger Bal": 14930.71, "Commentary / Description": "Wealth Ops: Amount of £14,930.71 has been credited to unalloc 16/06.", "Action Taken": "Wealth Ops to investigate and debit from unalloc."}
         ]
         st.data_editor(pd.DataFrame(static_adj_data), column_config={
             "Combined User Bal": st.column_config.NumberColumn("Combined User Bal", format="£%,.2f"),
@@ -644,6 +666,79 @@ try:
         with st.expander("📉 User shortfall not applied to bulk ledger", expanded=True):
             sh_df = pd.DataFrame([{"Date": "16/06/2026", "Errored Order ID/break details": "Amount of £4,393.67 residual interest paid to users as part of the transfer out process", "Admin Link": "N/A", "Action": "To be moved from CISA corporate interest to CM 17/06", "Jira Ticket": "N/A", "Amount": -4393.67}])
             st.data_editor(sh_df, column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t5_sh_breaks_sec")
+
+    # =========================================================================================
+    # 👑 🔥 TAB 6: CISA - CASS EXTERNAL RECONCILIATION SUITE (100% NEW LIVE WORKSPACE)
+    # =========================================================================================
+    elif selected_tab == "6. CISA - CASS External Rec":
+        df_tab6 = pd.read_excel(EXCEL_FILE, sheet_name="6. CISA - CASS External Rec", header=None)
+        
+        # 📊 1. Top Audit Summary Header Card (image_3a83be.png)
+        ext_diff_raw = safe_float(df_tab6.iloc[4, 4]) if df_tab6.shape[0] > 4 else 0.0
+        ext_conclusion = str(df_tab6.iloc[4, 5]).strip() if df_tab6.shape[0] > 4 and pd.notna(df_tab6.iloc[4, 5]) else "Conclusion: No external breaks."
+
+        st.markdown("### 📊 External Client Money Statement Reconciliation Suite")
+        st.caption("FCA CASS 7.15 External Ledger Verification vs Bank Statement Confirmations.")
+
+        st.markdown(f"""
+            <div class="reason-box" style="border-left-color: #10b981;">
+                <div class="reason-title" style="color: #10b981; font-size: 15px;">🔒 Regulatory External Reconciliation Status</div>
+                <div class="reason-section" style="font-size: 14px; white-space: pre-line;">
+                    <strong>External Reconciliation Difference:</strong> <span style="color:#10b981; font-weight:700;">£ {ext_diff_raw:,.2f}</span><br>
+                    <strong>Audit Assessment:</strong> {ext_conclusion}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # 📋 2. Main Provider External Hold Matrix (image_3a83be.png)
+        st.markdown('<div class="table-header-container"><div class="table-title">🏛️ CASS 7.15 Client Money Bank Account Validation Ledger</div></div>', unsafe_allow_html=True)
+        
+        # Live lookup για κάθε τράπεζα με fallbacks από το screenshot σου
+        citi_i, citi_e, citi_d = find_tab6_row_data(df_tab6, "Citibank", 176021153.40, 176021153.40)
+        ly_i, ly_e, ly_d     = find_tab6_row_data(df_tab6, "Easy Access", 3959844.10, 3959844.10)
+        lyn_i, lyn_e, lyn_d  = find_tab6_row_data(df_tab6, "Notice", 747535672.00, 747535672.00)
+        qnb_i, qnb_e, qnb_d  = find_tab6_row_data(df_tab6, "QNB", 1168000000.00, 1168000000.00)
+        bbva_i, bbva_e, bbva_d = find_tab6_row_data(df_tab6, "BBVA", 294960631.10, 294960631.10)
+
+        main_holdings_data = [
+            {"Provider": "Citibank", "Type of Account": "Main Activity", "Internal Holdings (Ledger)": citi_i, "External Holdings Statement": citi_e, "Difference": citi_d},
+            {"Bank": "Lloyds", "Type of Account": "Easy Access", "Internal Holdings (Ledger)": ly_i, "External Holdings Statement": ly_e, "Difference": ly_d},
+            {"Bank": "Lloyds", "Type of Account": "Notice", "Internal Holdings (Ledger)": lyn_i, "External Holdings Statement": lyn_e, "Difference": lyn_d},
+            {"Bank": "QNB", "Type of Account": "Notice", "Internal Holdings (Ledger)": qnb_i, "External Holdings Statement": qnb_e, "Difference": qnb_d},
+            {"Bank": "HSBC", "Type of Account": "Easy Access", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Bank": "Blackrock", "Type of Account": "QMMF", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Bank": "BBVA", "Type of Account": "Easy access", "Internal Holdings (Ledger)": bbva_i, "External Holdings Statement": bbva_e, "Difference": bbva_d},
+            {"Bank": "BBVA", "Type of Account": "Notice account", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Bank": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 95 Day Notice", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Bank": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 65 Day Notice", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Bank": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 30 Day Notice", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Bank": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA Instant access", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Bank": "JP Morgan", "Type of Account": "JP Morgan Client Money account (76919)", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0}
+        ]
+        
+        st.data_editor(pd.DataFrame(main_holdings_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_main_ledger")
+
+        # 📊 3. Sub-Ledger Verification Section (image_3a83be.png)
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="table-header-container"><div class="table-title">🔍 Secondary Current Accounts Sub-Ledger Validation</div></div>', unsafe_allow_html=True)
+        
+        sub_ledger_data = [
+            {"Provider": "Citibank", "Type of Account": "Easy Access", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0}
+        ]
+        st.data_editor(pd.DataFrame(sub_ledger_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_sub_ledger")
+
+        # 📋 4. Outstanding Discrepancies & Breaks Log
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="table-header-container"><div class="table-title">🚫 Dynamic FCA External Statement Discrepancies & Breaks Log</div></div>', unsafe_allow_html=True)
+        
+        breaks_log_data = [
+            {"Breaks": "", "Investigation of differences": "Bank credits with no ledger entry", "Summary of key transactions": "", "Actions Taken": ""},
+            {"Breaks": "", "Investigation of differences": "Bank debits with no ledger entry", "Summary of key transactions": "", "Actions Taken": ""},
+            {"Breaks": "", "Investigation of differences": "Ledger debits with no bank entry", "Summary of key transactions": "", "Actions Taken": ""},
+            {"Breaks": "", "Investigation of differences": "Ledger credits with no bank entry", "Summary of key transactions": "", "Actions Taken": ""},
+            {"Breaks": "Other remaining difference", "Investigation of differences": "", "Summary of key transactions": "", "Actions Taken": "", "Difference": 0.0}
+        ]
+        st.data_editor(pd.DataFrame(breaks_log_data), column_config={"Difference": st.column_config.NumberColumn("Difference", format="£%,.2f")}, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
 except Exception as e:
     st.error(f"System Error: {e}")
