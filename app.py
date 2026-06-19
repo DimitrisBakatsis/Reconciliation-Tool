@@ -569,7 +569,7 @@ try:
         st.data_editor(premium_breaks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="premium_breaks_table")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="table-header-container"><div class="table-title">🏛️ CASS 7.16.22 Client Money Requirement Calculation Engine</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="table-header-container"><div class="table-title">🏛️ Client Money Requirement Calculation Engine</div></div>', unsafe_allow_html=True)
         
         col_calc_left, col_calc_right = st.columns(2)
         with col_calc_left:
