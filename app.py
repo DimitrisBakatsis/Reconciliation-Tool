@@ -186,8 +186,9 @@ def extract_break_row_data(df, search_keyword):
     except:
         return {"Discrepancy Category": search_keyword, "Value / Discrepancy": 0.0, "Key Transactions Source": "N/A", "Actions Planned / Taken": "N/A"}
 
-# 🛠️ ΑΛΓΟΡΙΘΜΟΣ ΔΙΑΧΩΡΙΣΜΟΥ CISA & LISA (TAB 3)
+# 🛠️ ΑΛΓΟΡΙΘΜΟΣ ΔΙΑΧΩΡΙΣΜΟΥ CISA & LISA ΑΠΟ ΤΗ ΣΤΗΛΗ M & Q (TAB 3)
 def compute_unalloc_aging_buckets(df):
+    # L: index 11, M: index 12, Q: index 16
     cisa_buckets = {"0-2": 0.0, "3-5": 0.0, "6-9": 0.0, "10+": 0.0}
     lisa_buckets = {"0-2": 0.0, "3-5": 0.0, "6-9": 0.0, "10+": 0.0}
     is_lisa_zone = False
@@ -323,9 +324,9 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-    # =========================================================================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (IMAGE_489ABF.PNG & IMAGE_489A9E.PNG FULLY INTEGRATED)
-    # =========================================================================================
+    # ==========================================
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
+    # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
         
@@ -349,14 +350,12 @@ try:
         
         st.markdown("### Client Money Balances & Asset Ledger Suite")
 
-        # 🛠️ 1. DYNAMIC BANK COMMENTARY LOOKUP (IMAGE_489ABF.PNG TOP BLOCKS EXTRACTED LIVE)
         cisa_citi_comment = parse_live_string(df_tab2, "Citibank", 1, "N/A")
         cisa_lloyds_ea    = parse_live_string(df_tab2, "Lloyds EA", 1, "N/A")
         cisa_lloyds_no    = parse_live_string(df_tab2, "Lloyds Notice", 1, "N/A")
         cisa_qnb_comment  = parse_live_string(df_tab2, "QNB", 1, "N/A")
         cisa_bbva_comment = parse_live_string(df_tab2, "BBVA", 1, "N/A")
 
-        # Cash ISA Balances Grid
         st.markdown(f"""
             <div class="table-header-container">
                 <div class="table-title">CASH ISA CLIENT MONEY BALANCES - GBP</div>
@@ -373,7 +372,6 @@ try:
         ])
         st.data_editor(cash_isa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="cash_isa_grid")
         
-        # Lifetime ISA Balances Grid
         st.markdown(f"""
             <div class="table-header-container">
                 <div class="table-title">LIFETIME ISA CLIENT MONEY BALANCES - GBP</div>
@@ -389,7 +387,6 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        # 📋 Commentary Reason Summary Block (Live Strings extracted from central column)
         cisa_comment = parse_live_string(df_tab2, "CISA: Overall", 0, "CISA shortfalls logged in backend matrix.")
         lisa_comment = parse_live_string(df_tab2, "LISA: Overall", 0, "LISA shortfalls logged in backend matrix.")
         quai_comment = parse_live_string(df_tab2, "Quai: Overall", 0, "Quai surplus matching active thresholds.")
@@ -407,7 +404,6 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🏠 Live Treasury Audit Workspace (IMAGE_489A41.PNG INPUT FORMS WORKING LIVE)
         st.markdown("### 🏠 Live Treasury Audit Workspace")
         audit_tab_cisa, audit_tab_lisa = st.tabs(["🚨 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
         with audit_tab_cisa:
@@ -444,9 +440,7 @@ try:
                     for idx, entry in enumerate(st.session_state.lisa_movements):
                         st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
 
-        # 🛠️ 2. ADDITIONAL EXCEL TABLES INTEGRATED AT THE BOTTOM (IMAGE_489ABF & IMAGE_489A9E)
         st.markdown("<br>### 🌐 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
-        
         with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (Live File Extracted)"):
             stocks_df = pd.DataFrame([
                 {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) * Pending Sells/Buys", "Previous Day Balance": parse_live_value(df_tab2, "90314552", -1), "COB Balance": parse_live_value(df_tab2, "90314552", 0), "Variance": parse_live_value(df_tab2, "90314552", 1), "Reconciliation": "Quai - Cash Held"},
@@ -462,20 +456,19 @@ try:
             ])
             st.data_editor(other_accounts_df, column_config=currency_config, use_container_width=True, hide_index=True, key="other_client_money_grid")
 
-    # ==========================================
-    # 📈 TAB 3: UNALLOC REC
-    # ==========================================
+    # =========================================================================================
+    # 📈 🔥 TAB 3: UNALLOC REC (100% FIXED PARSER & DYNAMIC STATUS CARDS)
+    # =========================================================================================
     elif selected_tab == "3. Unalloc Rec":
         st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
         df_tab3 = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
         
-        cisa_unalloc_tot = parse_live_value(df_tab3, "CISA total unallocated", 1, 294085.70)
-        lisa_unalloc_tot = parse_live_value(df_tab3, "LISA total unallocated", 1, 163659.42)
-        bucket_0_2 = parse_live_value(df_tab3, "0-2 days", 1, 350308.39)
-        bucket_3_5 = parse_live_value(df_tab3, "3-5 days", 1, 77906.50)
-        bucket_6_9 = parse_live_value(df_tab3, "6-9 days", 1, 26046.54)
-        bucket_10p = parse_live_value(df_tab3, "10+ days", 1, 3483.69)
+        # 🛠️ 1. Live διαχωρισμός των ποσών από τη στήλη M & Q
+        cisa_b, lisa_b = compute_unalloc_aging_buckets(df_tab3)
+        cisa_unalloc_tot = sum(cisa_b.values())
+        lisa_unalloc_tot = sum(lisa_b.values())
 
+        # 🛠️ 2. Δυναμική απεικόνιση των Status Cards με τις σωστές παρενθέσεις (0.025%)
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">CISA TOTAL UNALLOCATED</div><div class="metric-value green">£ {cisa_unalloc_tot:,.2f}</div></div>
@@ -491,29 +484,30 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📊 Live Unallocated Funds Portfolio Exposure (Days Aged)</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📊 LIVE UNALLOCATED FUNDS PORTFOLIO EXPOSURE (DAYS AGED)</div></div>", unsafe_allow_html=True)
         col_bar_left, col_bar_right = st.columns(2)
+        
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
-            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {bucket_0_2:,.2f}</span></div></div>', unsafe_allow_html=True)
-            st.progress(0.65)
-            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {bucket_3_5:,.2f}</span></div></div>', unsafe_allow_html=True)
-            st.progress(0.25)
-            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {bucket_6_9:,.2f}</span></div></div>', unsafe_allow_html=True)
-            st.progress(0.08)
-            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {bucket_10p:,.2f}</span></div></div>', unsafe_allow_html=True)
-            st.progress(0.02)
+            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {cisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.progress(min(1.0, cisa_b["0-2"] / max(1.0, cisa_unalloc_tot)))
+            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {cisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.progress(min(1.0, cisa_b["3-5"] / max(1.0, cisa_unalloc_tot)))
+            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {cisa_b["6-9"]:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.progress(min(1.0, cisa_b["6-9"] / max(1.0, cisa_unalloc_tot)))
+            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {cisa_b["10+"]:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.progress(min(1.0, cisa_b["10+"] / max(1.0, cisa_unalloc_tot)))
             
         with col_bar_right:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Lifetime ISA Aging Distribution</p>", unsafe_allow_html=True)
-            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {bucket_0_2:,.2f}</span></div></div>', unsafe_allow_html=True)
-            st.progress(0.50)
-            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {bucket_3_5:,.2f}</span></div></div>', unsafe_allow_html=True)
-            st.progress(0.30)
-            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {bucket_6_9:,.2f}</span></div></div>', unsafe_allow_html=True)
-            st.progress(0.15)
-            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {bucket_10p:,.2f}</span></div></div>', unsafe_allow_html=True)
-            st.progress(0.05)
+            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {lisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.progress(min(1.0, lisa_b["0-2"] / max(1.0, lisa_unalloc_tot)))
+            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {lisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.progress(min(1.0, lisa_b["3-5"] / max(1.0, lisa_unalloc_tot)))
+            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {lisa_b["6-9"]:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.progress(min(1.0, lisa_b["6-9"] / max(1.0, lisa_unalloc_tot)))
+            st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {lisa_b["10+"]:,.2f}</span></div></div>', unsafe_allow_html=True)
+            st.progress(min(1.0, lisa_b["10+"] / max(1.0, lisa_unalloc_tot)))
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ==========================================
@@ -572,7 +566,7 @@ try:
         with col_calc_right:
             st.markdown(f"""
                 <div class="workspace-card" style="margin-bottom:0;">
-                    <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments</div></div>
+                    <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments (2a + 3)</div></div>
                     <div class="recon-row"><span>Unallocated Balances Pool</span><strong>£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">£ {temp_tx_funding:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding:,.2f}</strong></div>
