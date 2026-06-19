@@ -72,6 +72,24 @@ st.markdown("""
     .reason-section { font-size: 13px; line-height: 1.6; color: #d1d5db; margin-bottom: 12px; }
     .reason-section strong { color: #ffffff; }
 
+    /* Custom CSS Aging Bars Layout - FIXED RIGHT ALIGNMENT */
+    .aging-bar-wrapper { margin-bottom: 15px; }
+    .aging-bar-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #d1d5db; width: 100%; }
+    
+    /* PDF Bottom Floating Container */
+    .pdf-container {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 30px;
+        margin-bottom: 10px;
+        padding-right: 5px;
+    }
+    
+    /* Sidebar Layout Fixes */
+    [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
+    .sidebar-custom-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; }
+    .sidebar-input-label { font-size: 14px; font-weight: 600; color: #ffffff; margin-top: 15px; margin-bottom: 10px; }
+    
     .stDataEditor { border-top: none !important; border-radius: 0 0 8px 8px !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -85,16 +103,16 @@ def load_raw_excel():
 # 🛠️ LIVE CELL PARSER & CLEANER
 def safe_float(val):
     if pd.isna(val):
-        return None
+        return 0.0
     if isinstance(val, (int, float)):
         return float(val)
     try:
         clean_str = str(val).replace("£", "").replace(",", "").replace("Units", "").strip()
         if clean_str == "" or clean_str.lower() == "n/a":
-            return None
+            return 0.0
         return float(clean_str)
     except:
-        return None
+        return 0.0
 
 def parse_live_value(df, keyword, offset_col=1, default=0.0):
     try:
@@ -103,8 +121,7 @@ def parse_live_value(df, keyword, offset_col=1, default=0.0):
                 cell_str = str(df.iloc[r, c]).strip().lower()
                 if keyword.lower() in cell_str:
                     val = df.iloc[r, c + offset_col]
-                    parsed = safe_float(val)
-                    return parsed if parsed is not None else default
+                    return safe_float(val)
         return default
     except:
         return default
@@ -151,7 +168,7 @@ def extract_break_row_data(df, search_keyword):
                 if search_keyword.lower() in str(df.iloc[r, c]).lower():
                     category = str(df.iloc[r, c]).strip()
                     val = df.iloc[r, c + 1]
-                    numeric_val = safe_float(val) if safe_float(val) is not None else 0.0
+                    numeric_val = safe_float(val)
                     tx = str(df.iloc[r, c + 2]).strip() if pd.notna(df.iloc[r, c + 2]) else "N/A"
                     action = str(df.iloc[r, c + 3]).strip() if pd.notna(df.iloc[r, c + 3]) else "N/A"
                     return {"Discrepancy Category": category, "Value / Discrepancy": numeric_val, "Key Transactions Source": tx, "Actions Planned / Taken": action}
@@ -178,7 +195,7 @@ def compute_unalloc_aging_buckets(df):
             if pd.isna(val_m) or str(val_m).strip().lower() in ["", "n/a", "diff", "sum"]:
                 continue
                 
-            amt = safe_float(val_m) if safe_float(val_m) is not None else 0.0
+            amt = safe_float(val_m)
             if amt == 0.0:
                 continue
                 
@@ -200,7 +217,7 @@ def compute_unalloc_aging_buckets(df):
             
     return cisa_buckets, lisa_buckets
 
-# 🛠️ ΔΥΝΑΜΙΚΟΣ ΥΠΟΛΟΓΙΣΜΟΣ VARIANCE & COB ΜΕ ΦΙΛΤΡΟ ΓΙΑ ΜΗΔΕΝΙΚΑ (TAB 2)
+# 🛠️ DYNAMIC CELL PARSER ΓΙΑ ΤΑ SECONDARY PORTFOLIOS
 def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, performed_by="Quai - Cash Held"):
     try:
         for r in range(df.shape[0]):
@@ -213,14 +230,11 @@ def find_row_data_by_keyword_match(df, row_keyword, bank_name, entity_name, perf
                         numeric_cells.append(float(cell_val))
                     elif pd.notna(cell_val) and any(char.isdigit() for char in str(cell_val)) and not ("147" in str(cell_val) or "903" in str(cell_val)):
                         val_cleaned = safe_float(cell_val)
-                        if val_cleaned is not None:
-                            numeric_cells.append(val_cleaned)
+                        numeric_cells.append(val_cleaned)
                 
                 prev_day = numeric_cells[0] if len(numeric_cells) > 0 else 0.0
-                # Αν το Excel είναι άδειο, το COB μπαίνει 0.0
-                cob_bal = numeric_cells[1] if len(numeric_cells) > 1 else 0.0
+                cob_bal  = numeric_cells[1] if len(numeric_cells) > 1 else 0.0
                 
-                # 🔴 ΔΙΟΡΘΩΣΗ: Αν το COB είναι 0.0 (άδειο), το Variance βγαίνει 0.0 αντί για αρνητικό
                 variance = (cob_bal - prev_day) if cob_bal != 0.0 else 0.0
                 
                 return {
@@ -332,7 +346,7 @@ try:
             """, unsafe_allow_html=True)
 
     # ==========================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (ΚΛΕΙΔΩΜΕΝΟ)
     # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
@@ -394,45 +408,9 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        cisa_comment = parse_live_string(df_tab2, "CISA: Overall", 0, "CISA shortfalls logged in matrix.")
-        lisa_comment = parse_live_string(df_tab2, "LISA: Overall", 0, "LISA shortfalls logged in matrix.")
-        quai_comment = parse_live_string(df_tab2, "Quai: Overall", 0, "Quai surplus matching thresholds.")
-        add_comment  = parse_live_string(df_tab2, "Additional Comments", 1, "No secondary ledger comments.")
-        
-        st.markdown(f"""
-            <div class="reason-box" style="border-left-color: #3b82f6;">
-                <div class="reason-title">📋 REASON FOR INTERNAL MOVEMENTS & COMMENTARY</div>
-                <div class="reason-section" style="font-size:13px; color:#d1d5db; line-height:1.6;">
-                    <strong>CISA Internal Flows:</strong> {cisa_comment}<br><br>
-                    <strong>LISA Internal Flows:</strong> {lisa_comment}<br><br>
-                    <strong>Quai Settlement Rules:</strong> {quai_comment}<br><br>
-                    <strong>Additional Audit Comments:</strong> <em>{add_comment}</em>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("### 🏠 Live Treasury Audit Workspace")
-        audit_tab_cisa, audit_tab_lisa = st.tabs(["🚨 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
-        with audit_tab_cisa:
-            col_form, col_logs = st.columns([1, 2])
-            with col_form:
-                cisa_from = st.selectbox("From Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], key="cisa_from_sel")
-                cisa_to = st.selectbox("To Account", ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"], index=1, key="cisa_to_sel")
-                cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="cisa_amt_zero")
-                cisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="cisa_reason_input")
-                if st.button("Commit to Audit Log", key="btn_commit_cisa"):
-                    if cisa_amount > 0 or cisa_reason:
-                        st.session_state.cisa_movements.append({"From": cisa_from, "To": cisa_to, "Amount": f"£{cisa_amount:,.2f}", "Reason": cisa_reason if cisa_reason else "Manual adjustment"})
-                        st.rerun()
-            with col_logs:
-                if not st.session_state.cisa_movements: st.info("No active logs recorded for Cash ISA.")
-                else:
-                    for idx, entry in enumerate(st.session_state.cisa_movements):
-                        st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
-
         st.markdown("<br>### 🌐 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
         
-        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (100% Dynamic Sync)", expanded=True):
+        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (100% Live Copy Paste Cells C60-E62)", expanded=True):
             row_barclays = find_row_data_by_keyword_match(df_tab2, "90314552", "Barclays UK PLC", "Saveable Limited", "Quai - Cash Held")
             row_wf1      = find_row_data_by_keyword_match(df_tab2, "SAVEABLE LTD", "Winterfloods", "Saveable Limited", "Quai - Units Held")
             df_wf_block  = df_tab2.iloc[locate_row_index(df_tab2, "Winterfloods")+1:].reset_index(drop=True)
@@ -444,16 +422,18 @@ try:
         with st.expander("🔑 Other Client Money Accounts & QMMF Liquid Reserves", expanded=True):
             quai_req = df_tab2.iloc[65, 10] if df_tab2.shape[0] > 65 and df_tab2.shape[1] > 10 else 3532196.96
             quai_res = df_tab2.iloc[66, 10] if df_tab2.shape[0] > 66 and df_tab2.shape[1] > 10 else 3532197.14
-            quai_req = safe_float(quai_req)
-            quai_res = safe_float(quai_res)
-            quai_sh  = quai_res - quai_req
+            quai_sh  = df_tab2.iloc[67, 10] if df_tab2.shape[0] > 67 and df_tab2.shape[1] > 10 else 0.18
+            
+            quai_req_val = safe_float(quai_req)
+            quai_res_val = safe_float(quai_res)
+            quai_sh_val  = safe_float(quai_sh)
             
             st.markdown(f"""
                 <div style="background-color: #11141d; padding: 15px; border-radius: 6px; border: 1px solid #1f2937; margin-bottom: 20px;">
                     <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS (LIVE CELLS K66-K68)</span><br>
-                    <div class="recon-row"><span>Requirement</span><strong>£ {quai_req:,.2f}</strong></div>
-                    <div class="recon-row"><span>Resource</span><strong>£ {quai_res:,.2f}</strong></div>
-                    <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh:,.2f}</strong></div>
+                    <div class="recon-row"><span>Requirement</span><strong>£ {quai_req_val:,.2f}</strong></div>
+                    <div class="recon-row"><span>Resource</span><strong>£ {quai_res_val:,.2f}</strong></div>
+                    <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -464,9 +444,9 @@ try:
             other_accounts_dynamic_df = pd.DataFrame([row_citi_eur, row_mmf1, row_mmf2])
             st.data_editor(other_accounts_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="other_client_money_live")
 
-    # ==========================================
-    # 📈 TAB 3: UNALLOC REC (ΚΛΕΙΔΩΜΕΝΟ)
-    # ==========================================
+    # =========================================================================================
+    # 📈 🔥 TAB 3: UNALLOC REC (PREMIUM ALIGNED PORTFOLIO RESUMED)
+    # =========================================================================================
     elif selected_tab == "3. Unalloc Rec":
         st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
         df_tab3 = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
@@ -494,14 +474,18 @@ try:
         st.markdown("<div class='workspace-card'><div class='workspace-header'><div class='workspace-title'>📊 LIVE UNALLOCATED FUNDS PORTFOLIO EXPOSURE (DAYS AGED)</div></div>", unsafe_allow_html=True)
         col_bar_left, col_bar_right = st.columns(2)
         
+        # 👑 FIXED THE LOOK: Τα ονόματα αριστερά και τα ποσά ευθυγραμμίζονται δεξιά (image_492da3.png)
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
             st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {cisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["0-2"] / max(1.0, cisa_unalloc_tot)))
+            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {cisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["3-5"] / max(1.0, cisa_unalloc_tot)))
+            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {cisa_b["6-9"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["6-9"] / max(1.0, cisa_unalloc_tot)))
+            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {cisa_b["10+"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["10+"] / max(1.0, cisa_unalloc_tot)))
             
@@ -509,10 +493,13 @@ try:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Lifetime ISA Aging Distribution</p>", unsafe_allow_html=True)
             st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {lisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["0-2"] / max(1.0, lisa_unalloc_tot)))
+            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {lisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["3-5"] / max(1.0, lisa_unalloc_tot)))
+            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟠 6-9 Days (High Priority Warning)</span><span>£ {lisa_b["6-9"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["6-9"] / max(1.0, lisa_unalloc_tot)))
+            
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🔴 10+ Days (CASS BREACH RISK)</span><span>£ {lisa_b["10+"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, lisa_b["10+"] / max(1.0, lisa_unalloc_tot)))
         st.markdown("</div>", unsafe_allow_html=True)
@@ -527,7 +514,7 @@ try:
         shortfall_calculated  = parse_live_value(df_tab4, "Daily Surplus or Shortfall", 1, -4393.67)
         conclusion_excel_text = parse_dynamic_conclusion(df_tab4, row_shortfall_idx, default="Conclusion data not found.")
         
-        combined_user_balance = parse_live_value(df_tab4, "Combined User Balance", 1, 234358224.61)
+        combined_user_balance = parse_live_value(df_tab4, "Combined User Balance", 1, 2384358224.61)
         less_unallocated      = parse_live_value(df_tab4, "Less Unallocated", 1, -277834.89)
         transfers_isa         = parse_live_value(df_tab4, "Transfers in from ISA providers", 1, 2001813.90)
         individual_client_bal = parse_live_value(df_tab4, "Individual Client Balances", 1, 2386637873.40)
