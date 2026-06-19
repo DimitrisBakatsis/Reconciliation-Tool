@@ -97,6 +97,15 @@ st.markdown("""
         background-color: #1a1c24 !important; color: #ffffff !important; border: 1px solid #4a5568 !important; border-radius: 6px !important; padding: 6px 16px !important; font-size: 13px !important;
     }
     
+    /* PDF Bottom Floating Container */
+    .pdf-container {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 30px;
+        margin-bottom: 10px;
+        padding-right: 5px;
+    }
+    
     /* Sidebar Layout Fixes */
     [data-testid="stSidebar"] { background-color: #0d0f16; border-right: 1px solid #1f2937; }
     .sidebar-custom-title { font-size: 11px; font-weight: 700; color: #4b5563; letter-spacing: 1px; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; }
@@ -112,7 +121,7 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# Αρχικοποίηση session states για τα Live Logs του Commentary Suite (Ξεκινάνε πλέον τελείως άδεια)
+# Αρχικοποίηση session states για τα Live Logs του Commentary Suite
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
 if "lisa_movements" not in st.session_state:
@@ -289,7 +298,7 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🏁 LIVE TREASURY AUDIT WORKSPACE (IMAGE_89667A.PNG LOOK)
+        # 🏁 LIVE TREASURY AUDIT WORKSPACE
         st.markdown("### ✍️ Live Treasury Audit Workspace")
         cisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB", "BBVA"]
         lisa_accounts = ["Citibank", "Lloyds EA", "Lloyds Notice", "QNB"]
@@ -302,10 +311,7 @@ try:
             with col_form:
                 cisa_from = st.selectbox("From Account", cisa_accounts, key="cisa_from_sel")
                 cisa_to = st.selectbox("To Account", cisa_accounts, index=1, key="cisa_to_sel")
-                
-                # 🛠️ ΔΙΟΡΘΩΣΗ: Αλλαγή του key σε 'cisa_amt_zero' για να σβήσει οριστικά το 1.000.000 από τη μνήμη
                 cisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="cisa_amt_zero")
-                
                 cisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="cisa_reason_input")
                 if st.button("Commit to Audit Log", key="btn_commit_cisa"):
                     if cisa_amount > 0 or cisa_reason:
@@ -335,10 +341,7 @@ try:
             with col_form_l:
                 lisa_from = st.selectbox("From Account", lisa_accounts, key="lisa_from_sel")
                 lisa_to = st.selectbox("To Account", lisa_accounts, index=1, key="lisa_to_sel")
-                
-                # 🛠️ ΔΙΟΡΘΩΣΗ: Αλλαγή του key σε 'lisa_amt_zero' για να σβήσει οριστικά το 1.000.000 από τη μνήμη
                 lisa_amount = st.number_input("Amount (£)", min_value=0.0, value=0.00, step=1000.0, format="%.2f", key="lisa_amt_zero")
-                
                 lisa_reason = st.text_input("Variance Explanation / Reason", placeholder="Type manual movement or commentary here...", key="lisa_reason_input")
                 if st.button("Commit to Audit Log", key="btn_commit_lisa"):
                     if lisa_amount > 0 or lisa_reason:
@@ -378,6 +381,13 @@ try:
             st.dataframe(df_any.dropna(how='all').reset_index(drop=True), use_container_width=True)
         except:
             st.warning("Sheet data fetched live from backend template storage.")
+
+    # 🏁 ΕΠΑΝΑΦΟΡΑ ΚΟΥΜΠΙΟΥ: EXPORT TO PDF (Στο κάτω μέρος της σελίδας)
+    st.markdown("<div class='pdf-container'>", unsafe_allow_html=True)
+    if st.button("📄 Export to PDF", key="btn_export_global_pdf"):
+        st.toast("Generating financial audit report PDF...", icon="🔄")
+        # Εδώ μελλοντικά συνδέεις τη βιβλιοθήκη reportlab ή fpdf
+    st.markdown("</div>", unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"System Error: {e}")
