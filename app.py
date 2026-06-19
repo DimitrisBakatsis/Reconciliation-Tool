@@ -100,7 +100,7 @@ EXCEL_FILE = "AUTOMATION CASS Reconciliation & Daily Client Money Reporting Temp
 def load_raw_excel():
     return pd.ExcelFile(EXCEL_FILE)
 
-# 🛠️ LIVE CELL PARSER: Σαρώνει το sheet για να βρει το keyword και τραβάει την τιμή με offset
+# 🛠️ LIVE CELL PARSER
 def parse_live_value(df, keyword, offset_col=1, default=0.0):
     try:
         for r in range(df.shape[0]):
@@ -114,12 +114,11 @@ def parse_live_value(df, keyword, offset_col=1, default=0.0):
     except:
         return default
 
-# 🛠️ DYNAMIC CONCLUSION EXTRACTOR: Ψάχνει live στη γραμμή του Shortfall για το κείμενο Conclusion
+# 🛠️ DYNAMIC CONCLUSION EXTRACTOR
 def parse_dynamic_conclusion(df, row_index, default="N/A"):
     if row_index is None:
         return default
     try:
-        # Ψάχνει σε όλες τις επόμενες στήλες της ίδιας γραμμής για το κείμενο "conclusion"
         for col_idx in range(df.shape[1]):
             cell_content = str(df.iloc[row_index, col_idx]).strip()
             if "conclusion" in cell_content.lower():
@@ -128,7 +127,7 @@ def parse_dynamic_conclusion(df, row_index, default="N/A"):
     except:
         return default
 
-# 🛠️ LIVE ROW LOCATOR: Επιστρέφει το index της γραμμής που περιέχει το keyword
+# 🛠️ LIVE ROW LOCATOR
 def locate_row_index(df, keyword):
     for r in range(df.shape[0]):
         for c in range(df.shape[1]):
@@ -171,8 +170,7 @@ try:
         "Variance": st.column_config.NumberColumn("Variance", format="£%,.2f"),
         "Amount": st.column_config.NumberColumn("Amount", format="£%,.2f"),
         "Payin Amount": st.column_config.NumberColumn("Payin Amount", format="£%,.2f"),
-        "Discrepancies": st.column_config.NumberColumn("Discrepancies", format="£%,.2f"),
-        "Amounts": st.column_config.NumberColumn("Amounts", format="£%,.2f")
+        "Value / Discrepancy": st.column_config.NumberColumn("Value / Discrepancy", format="£%,.2f")
     }
 
     # ==========================================
@@ -290,15 +288,12 @@ try:
         st.markdown("</div>", unsafe_allow_html=True)
 
     # =========================================================================================
-    # 🏛️ 🚀 TAB 4: CISA - CASS INTERNAL REC (ΠΛΗΡΩΣ ΔΥΝΑΜΙΚΟ CONCLUSTION BANNER)
+    # 🏛️ 🚀 TAB 4: CISA - CASS INTERNAL REC (PREMIUM & CLEAN BREAKS MATRIX)
     # =========================================================================================
     elif selected_tab == "4. CISA - CASS Internal Rec":
         df_tab4 = pd.read_excel(EXCEL_FILE, sheet_name="4. CISA - CASS Internal Rec", header=None)
         
-        # Εντοπισμός της γραμμής του Shortfall
         row_shortfall_idx = locate_row_index(df_tab4, "Daily Surplus or Shortfall")
-        
-        # 🔴 ΔΙΟΡΘΩΣΗ: Live scan της γραμμής για να βρει το "Conclusion:" (Αγνοεί στατικές θέσεις)
         shortfall_calculated  = parse_live_value(df_tab4, "Daily Surplus or Shortfall", 1, -4393.67)
         conclusion_excel_text = parse_dynamic_conclusion(df_tab4, row_shortfall_idx, default="Conclusion data not found.")
         
@@ -313,7 +308,7 @@ try:
         st.markdown("### 📊 Internal Client Money Reconciliation Suite (v4.1) - Cash ISA")
         st.caption("FCA Compliance Ledger Verification according to CASS 7.16.22 Rules.")
 
-        # --- 1. COMPLIANCE BANNER HEADER (LIVE TEXT) ---
+        # --- 1. COMPLIANCE BANNER HEADER ---
         st.markdown(f"""
             <div class="reason-box">
                 <div class="reason-title" style="color: #ef4444; font-size: 15px;">⚠️ Active Regulatory Target Status</div>
@@ -324,15 +319,26 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # --- 2. BREAKS & DISCREPANCIES MATRIX ---
-        st.markdown('<div class="table-header-container"><div class="table-title">🚫 Dynamic Outstanding Breaks & Discrepancies Ledger</div></div>', unsafe_allow_html=True)
+        # --- 2. BREAKS & DISCREPANCIES MATRIX (PREMIUM DESIGN & FILTERED ROWS) ---
+        st.markdown('<div class="table-header-container"><div class="table-title">🚫 Outstanding Discrepancies & Active Breaks Grid</div></div>', unsafe_allow_html=True)
+        
+        # 🛠️ ΔΙΟΡΘΩΣΗ: Φιλτράρισμα και οργάνωση του πίνακα των Breaks για να φαίνεται Premium (Όχι σαν ωμό Excel)
         breaks_start_idx = locate_row_index(df_tab4, "Breaks")
         if breaks_start_idx:
-            st.data_editor(df_tab4.dropna(how="all").iloc[breaks_start_idx:breaks_start_idx+6].fillna(""), use_container_width=True, hide_index=True)
+            # Τραβάμε live μόνο τις 4 συγκεκριμένες γραμμές των Breaks, αγνοώντας τις 2 τελευταίες
+            raw_breaks_slice = df_tab4.iloc[breaks_start_idx+1 : breaks_start_idx+5]
+            
+            premium_breaks_df = pd.DataFrame({
+                "Discrepancy Category": raw_breaks_slice[3].astype(str).tolist(),
+                "Value / Discrepancy": [float(x) if isinstance(x, (int, float)) else 0.0 for x in raw_breaks_slice[4].tolist()],
+                "Key Transactions Source": raw_breaks_slice[5].fillna("N/A").astype(str).tolist(),
+                "Actions Planned / Taken": raw_breaks_slice[6].fillna("N/A").astype(str).tolist()
+            })
+            st.data_editor(premium_breaks_df, column_config=currency_config, use_container_width=True, hide_index=True, key="premium_breaks_table")
 
         # --- 3. CLIENT MONEY REQUIREMENT CALCULATION ---
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="table-header-container"><div class="table-title">🏛️ CASS 7.16.22 Client Money Requirement Engine</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="table-header-container"><div class="table-title">🏛️ CASS 7.16.22 Client Money Requirement Calculation Engine</div></div>', unsafe_allow_html=True)
         
         col_calc_left, col_calc_right = st.columns(2)
         with col_calc_left:
