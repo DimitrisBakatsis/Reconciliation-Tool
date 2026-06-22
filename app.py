@@ -488,7 +488,7 @@ try:
                     <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS (LIVE CELLS K66-K68)</span><br>
                     <div class="recon-row"><span>Requirement</span><strong>£ {quai_req_val:,.2f}</strong></div>
                     <div class="recon-row"><span>Resource</span><strong>£ {quai_res_val:,.2f}</strong></div>
-                    <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
+                    <div class="recon-row total"><span>Shortfall / Surplus</span>log <strong>£ {quai_sh_val:,.2f}</strong></div>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -774,7 +774,7 @@ try:
             st.warning("Sheet data fetched live from backend template storage.")
 
     # =========================================================================================
-    # 👑 🔥 GLOBAL 14-TAB REPORTLAB PDF GENERATOR SUITE
+    # 👑 🔥 UNIFIED 14-TAB REPORTLAB PDF GENERATOR SUITE
     # =========================================================================================
     def generate_unified_cass_pdf(excel_path, cob_date):
         buffer = io.BytesIO()
@@ -783,7 +783,7 @@ try:
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle('PDFTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=22, textColor=colors.HexColor('#1f2937'), spaceAfter=15)
         tab_style = ParagraphStyle('PDFTabHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=14, textColor=colors.HexColor('#3b82f6'), spaceBefore=20, spaceAfter=10)
-        normal_style = ParagraphStyle('PDFNormal', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=11, textColor=colors.HexColor('#374151'))
+        normal_style = ParagraphStyle('PDFNormal', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#374151'))
         
         story = []
         
@@ -804,8 +804,12 @@ try:
             
             if not df_clean.empty:
                 for idx, row in df_clean.astype(str).iterrows():
-                    row_data = [Paragraph(str(cell)[:40], normal_style) for cell in row.values]
-                    table_content.append(row_data)
+                    # Καθαρισμός κειμένου για αποφυγή XML σφαλμάτων μέσα στο PDF cell
+                    cleaned_row = []
+                    for cell in row.values:
+                        clean_cell = str(cell).replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
+                        cleaned_row.append(Paragraph(clean_cell[:40], normal_style))
+                    table_content.append(cleaned_row)
             
             if table_content:
                 num_cols = len(table_content[0])
@@ -834,17 +838,14 @@ try:
     # 🏁 GLOBAL PDF DOWNLOAD BUTTON AT THE BOTTOM
     st.markdown("<div class='pdf-container'>", unsafe_allow_html=True)
     
-    with st.spinner("Preparing 14-Tab CASS Audit PDF Report..."):
-        try:
-            pdf_bytes = generate_unified_cass_pdf(EXCEL_FILE, formatted_date)
-            st.download_button(
-                label="📄 Export 14-Tabs to PDF",
-                data=pdf_bytes,
-                file_name=f"CASS_Master_Report_{formatted_date.replace('/', '_')}.pdf",
-                mime="application/pdf"
-            )
-        except Exception as pdf_err:
-            st.button(f"📄 Export to PDF (Error: Ensure reportlab is in requirements.txt)")
+    # Παραγωγή των bytes απευθείας για το download button χωρίς τυφλό try/except
+    pdf_bytes = generate_unified_cass_pdf(EXCEL_FILE, formatted_date)
+    st.download_button(
+        label="📄 Export 14-Tabs to PDF",
+        data=pdf_bytes,
+        file_name=f"CASS_Master_Report_{formatted_date.replace('/', '_')}.pdf",
+        mime="application/pdf"
+    )
             
     st.markdown("</div>", unsafe_allow_html=True)
 
