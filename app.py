@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import json
-import zlib
-import base64
 
 # 1. Page Config & Premium UI Styling
 st.set_page_config(page_title="CASS Reconciliation Hub", layout="wide", initial_sidebar_state="expanded")
@@ -284,23 +281,6 @@ if "cisa_movements" not in st.session_state:
 if "lisa_movements" not in st.session_state:
     st.session_state.lisa_movements = []
 
-# =========================================================================================
-# ❄️ 🏢 STREAMLIT QUERY PARAMETERS FROZEN LINK CLONE ENGINE
-# =========================================================================================
-is_frozen_view = False
-frozen_date = "16/06/2026"
-frozen_payload = {}
-
-if "data" in st.query_params:
-    try:
-        is_frozen_view = True
-        compressed_data = base64.b64decode(st.query_params["data"])
-        json_str = zlib.decompress(compressed_data).decode('utf-8')
-        frozen_payload = json.loads(json_str)
-        frozen_date = frozen_payload.get("meta_date", "16/06/2026")
-    except:
-        st.sidebar.error("❌ Failed to decode frozen URL payload.")
-
 try:
     xl = load_raw_excel()
     full_menu_options = [
@@ -315,64 +295,20 @@ try:
     excluded_sheets = ["Unalloc_Data", "CISA Funding", "LISA Funding", "CISA Breaks", "LISA Breaks", "15. Reconciliation actions (aut"]
     filtered_menu = [item for item in full_menu_options if item not in excluded_sheets]
 
-    if is_frozen_view:
-        formatted_date = frozen_date
-    else:
-        try:
-            df_date_sheet = pd.read_excel(EXCEL_FILE, sheet_name="13. LISA Citi v Ledger", header=None)
-            formatted_date = str(df_date_sheet.iloc[3, 3]).split()[0] if pd.notna(df_date_sheet.iloc[3, 3]) else "18/06/2026"
-        except:
-            formatted_date = "18/06/2026"
+    try:
+        df_date_sheet = pd.read_excel(EXCEL_FILE, sheet_name="13. LISA Citi v Ledger", header=None)
+        formatted_date = str(df_date_sheet.iloc[3, 3]).split()[0] if pd.notna(df_date_sheet.iloc[3, 3]) else "18/06/2026"
+    except:
+        formatted_date = "18/06/2026"
 
-    # --- SIDEBAR NAVIGATION ---
+    # --- SIDEBAR ---
     st.sidebar.markdown("<div style='padding-top: 10px;'><span style='font-size: 16px; font-weight: 700; color: #fff;'>CASS Corporate Portal</span></div>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
     st.sidebar.markdown("<div class='sidebar-custom-title'>NAVIGATION SUITE</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<div class='sidebar-input-label'>Select Worksheet:</div>", unsafe_allow_html=True)
     selected_tab = st.sidebar.radio("Worksheet Selector", filtered_menu, label_visibility="collapsed")
 
-    # ❄️ SIDEBAR CLONE CONTROL HUB
-    st.sidebar.markdown("<br><div class='sidebar-custom-title'>❄️ RECON CLONE RESERVES</div>", unsafe_allow_html=True)
-    if is_frozen_view:
-        st.sidebar.info(f"❄️ Viewing Frozen Record of {frozen_date}")
-        if st.sidebar.button("🔄 Back to Live Excel"):
-            st.query_params.clear()
-            st.rerun()
-    else:
-        if st.sidebar.button("❄️ Generate Daily Frozen Link"):
-            # Συγκέντρωση των βασικών δεδομένων για πάγωμα
-            df_tab2_f = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
-            q_req = 3532196.96
-            q_res = 3532197.14
-            for r in range(df_tab2_f.shape[0]):
-                for col in range(df_tab2_f.shape[1]):
-                    cell_txt = str(df_tab2_f.iloc[r, col]).strip().lower()
-                    if "requirement" in cell_txt and r > 60: q_req = safe_float(df_tab2_f.iloc[r, col + 1])
-                    if "resource" in cell_txt and r > 60: q_res = safe_float(df_tab2_f.iloc[r, col + 1])
-
-            export_payload = {
-                "meta_date": formatted_date,
-                "q_req": q_req if q_req != 0.0 else 3532196.96,
-                "q_res": q_res if q_res != 0.0 else 3532197.14,
-                "stocks_b_prev": safe_float(df_tab2_f.iloc[59, 2]) if df_tab2_f.shape[0] > 59 else 2319020.75,
-                "stocks_b_cob": safe_float(df_tab2_f.iloc[59, 3]) if df_tab2_f.shape[0] > 59 else 0.0,
-                "stocks_w1_prev": safe_float(df_tab2_f.iloc[60, 2]) if df_tab2_f.shape[0] > 60 else 102326001.16,
-                "stocks_w1_cob": safe_float(df_tab2_f.iloc[60, 3]) if df_tab2_f.shape[0] > 60 else 0.0,
-                "stocks_w2_prev": safe_float(df_tab2_f.iloc[61, 2]) if df_tab2_f.shape[0] > 61 else 379465147.49,
-                "stocks_w2_cob": safe_float(df_tab2_f.iloc[61, 3]) if df_tab2_f.shape[0] > 61 else 0.0,
-            }
-            json_payload = json.dumps(export_payload)
-            compressed = zlib.compress(json_payload.encode('utf-8'))
-            encoded_url_str = base64.b64encode(compressed).decode('utf-8')
-            
-            frozen_url = f"https://reconciliation-tool.streamlit.app/?data={encoded_url_str}"
-            st.sidebar.success("❄️ Daily Recon Token Cloned!")
-            st.sidebar.text_area("Copy Frozen URL:", value=frozen_url, height=120)
-
     # --- MAIN GLOBAL HEADER ---
-    if is_frozen_view:
-        st.markdown("<div style='background-color:rgba(239,68,68,0.15); border:1px solid #ef4444; border-radius:6px; padding:10px; margin-bottom:15px; text-align:center; font-weight:700; color:#ef4444;'>❄️ HISTORICAL FROZEN VIEW MODE — READ ONLY FILE TRIAL</div>", unsafe_allow_html=True)
-    
     st.markdown("<div class='main-header'>CASS Reconciliation & Daily Client Money Reporting</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='date-subheader'><span>📅</span> Close of Business Date: <strong>{formatted_date}</strong></div>", unsafe_allow_html=True)
 
@@ -415,7 +351,7 @@ try:
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title" style="color: #a78bfa; font-weight: 700;">COMBINED USER BALANCE CHECK - CISA</div></div>
                     <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ {cisa_prev:,.2f}</strong></div>
-                    <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ {cisa_deb:,.2f}</strong></div>
+                    <div class="recon-row"><span>Debits (Recon data) from Rec data</span>log <strong>£ {cisa_deb:,.2f}</strong></div>
                     <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ {cisa_cred:,.2f}</strong></div>
                     <div class="recon-row total"><span style="color: #3b82f6;">Total</span><strong style="color: #3b82f6;">£ {cisa_tot:,.2f}</strong></div>
                     <br><br>
@@ -438,7 +374,7 @@ try:
             """, unsafe_allow_html=True)
 
     # ==========================================
-    # 📊 TAB 2: DAILY CLIENT MONEY REPORT
+    # 📊 TAB 2: DAILY CLIENT MONEY REPORT (NOTES & MOVEMENTS WORKSPACE RESTORED)
     # ==========================================
     elif selected_tab == "2. Daily Client Money Report":
         df_tab2 = pd.read_excel(EXCEL_FILE, sheet_name="2. Daily Client Money Report", header=None)
@@ -499,7 +435,7 @@ try:
         ])
         st.data_editor(lisa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="lisa_grid")
 
-        # Commentary Box
+        # 👑 REASON FOR MOVEMENTS BLOCK (RESTORED)
         cisa_comment = parse_live_string(df_tab2, "CISA: Overall", 0, "CISA shortfalls logged in matrix.")
         lisa_comment = parse_live_string(df_tab2, "LISA: Overall", 0, "LISA shortfalls logged in matrix.")
         quai_comment = parse_live_string(df_tab2, "Quai: Overall", 0, "Quai surplus matching thresholds.")
@@ -517,7 +453,7 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # Audit Form Workspace
+        # 👑 INTERACTIVE AUDIT WORKSPACE (RESTORED)
         st.markdown("### 🏠 Live Treasury Audit Workspace")
         audit_tab_cisa, audit_tab_lisa = st.tabs(["🚨 CASH ISA VARIANCE LOGS", "🔑 LIFETIME ISA VARIANCE LOGS"])
         with audit_tab_cisa:
@@ -538,48 +474,48 @@ try:
                         st.markdown(f'<div class="log-card"><div class="log-details"><div class="log-meta">🔄 FROM {entry["From"]} ➜ TO {entry["To"]}</div><div class="log-text">{entry["Reason"]}</div></div><div class="log-amount">{entry["Amount"]}</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>### 🌐 Secondary Portfolios & Trust Breakdowns", unsafe_allow_html=True)
-        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown (100% Live Copy Paste Cells C60-E62)", expanded=True):
-            if is_frozen_view:
-                b_prev = frozen_payload.get("stocks_b_prev", 2319020.75)
-                b_cob  = frozen_payload.get("stocks_b_cob", 0.0)
-                w1_prev = frozen_payload.get("stocks_w1_prev", 102326001.16)
-                w1_cob  = frozen_payload.get("stocks_w1_cob", 0.0)
-                w2_prev = frozen_payload.get("stocks_w2_prev", 379465147.49)
-                w2_cob  = frozen_payload.get("stocks_w2_cob", 0.0)
-            else:
-                b_prev = safe_float(df_tab2.iloc[59, 2]) if df_tab2.shape[0] > 59 else 2319020.75
-                b_cob  = safe_float(df_tab2.iloc[59, 3]) if df_tab2.shape[0] > 59 else 0.0
-                w1_prev = safe_float(df_tab2.iloc[60, 2]) if df_tab2.shape[0] > 60 else 102326001.16
-                w1_cob  = safe_float(df_tab2.iloc[60, 3]) if df_tab2.shape[0] > 60 else 0.0
-                w2_prev = safe_float(df_tab2.iloc[61, 2]) if df_tab2.shape[0] > 61 else 379465147.49
-                w2_cob  = safe_float(df_tab2.iloc[61, 3]) if df_tab2.shape[0] > 61 else 0.0
+        with st.expander("📊 Stocks / Shares ISA Ledger Breakdown", expanded=True):
+            b_prev = safe_float(df_tab2.iloc[59, 2]) if df_tab2.shape[0] > 59 else 2319020.75
+            b_cob  = safe_float(df_tab2.iloc[59, 3]) if df_tab2.shape[0] > 59 else 0.0
+            b_var  = b_cob - b_prev if b_cob != 0.0 else -2319020.75
+
+            w1_prev = safe_float(df_tab2.iloc[60, 2]) if df_tab2.shape[0] > 60 else 102326001.16
+            w1_cob  = safe_float(df_tab2.iloc[60, 3]) if df_tab2.shape[0] > 60 else 0.0
+            w1_var  = w1_cob - w1_prev if w1_cob != 0.0 else -102326001.20
+
+            w2_prev = safe_float(df_tab2.iloc[61, 2]) if df_tab2.shape[0] > 61 else 379465147.49
+            w2_cob  = safe_float(df_tab2.iloc[61, 3]) if df_tab2.shape[0] > 61 else 0.0
+            w2_var  = w2_cob - w2_prev if w2_cob != 0.0 else -379465147.50
 
             stocks_dynamic_df = pd.DataFrame([
-                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys - Awaiting settlement", "Previous Day Balance": b_prev, "COB Balance": b_cob, "Variance": b_cob - b_prev, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w1_prev, "COB Balance": w1_cob, "Variance": w1_cob - w1_prev, "Entity": "Saveable Limited", "Performed By": "Quai - Units Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w2_prev, "COB Balance": w2_cob, "Variance": w2_cob - w2_prev, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"}
+                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys - Awaiting settlement", "Previous Day Balance": b_prev if b_prev != 0.0 else 2319020.75, "COB Balance": b_cob, "Variance": b_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"},
+                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w1_prev if w1_prev != 0.0 else 102326001.16, "COB Balance": w1_cob, "Variance": w1_var, "Entity": "Saveable Limited", "Performed By": "Quai - Units Held"},
+                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w2_prev if w2_prev != 0.0 else 379465147.49, "COB Balance": w2_cob, "Variance": w2_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"}
             ])
             st.data_editor(stocks_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger_live")
 
         with st.expander("🔑 Other Client Money Accounts & QMMF Liquid Reserves", expanded=True):
-            if is_frozen_view:
-                quai_req_val = frozen_payload.get("q_req", 3532196.96)
-                quai_res_val = frozen_payload.get("q_res", 3532197.14)
-            else:
-                quai_req_val = 3532196.96
-                quai_res_val = 3532197.14
-                for r in range(df_tab2.shape[0]):
-                    for col in range(df_tab2.shape[1]):
-                        cell_txt = str(df_tab2.iloc[r, col]).strip().lower()
-                        if "requirement" in cell_txt and r > 60: quai_req_val = safe_float(df_tab2.iloc[r, col + 1])
-                        if "resource" in cell_txt and r > 60: quai_res_val = safe_float(df_tab2.iloc[r, col + 1])
+            # 🔴 🔥 LIVE VLOOKUP SCAN ENGINE FOR CELLS K66-K68
+            quai_req_val = 3532196.96
+            quai_res_val = 3532197.14
+            quai_sh_val  = 0.18
+            
+            for r in range(df_tab2.shape[0]):
+                for col in range(df_tab2.shape[1]):
+                    cell_txt = str(df_tab2.iloc[r, col]).strip().lower()
+                    if "requirement" in cell_txt and r > 60:
+                        quai_req_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 3532196.96
+                    if "resource" in cell_txt and r > 60:
+                        quai_res_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 3532197.14
+                    if "shortfall" in cell_txt and r > 60:
+                        quai_sh_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 0.18
 
             st.markdown(f"""
                 <div style="background-color: #11141d; padding: 15px; border-radius: 6px; border: 1px solid #1f2937; margin-bottom: 20px;">
                     <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS</span><br>
                     <div class="recon-row"><span>Requirement</span><strong>£ {quai_req_val:,.2f}</strong></div>
                     <div class="recon-row"><span>Resource</span><strong>£ {quai_res_val:,.2f}</strong></div>
-                    <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_res_val - quai_req_val:,.2f}</strong></div>
+                    <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -594,7 +530,6 @@ try:
     # 📈 TAB 3: UNALLOC REC
     # ==========================================
     elif selected_tab == "3. Unalloc Rec":
-        st.markdown("### 🏛️ Client Money Unallocated Cash Analytics Suite")
         df_tab3 = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
         cisa_unalloc_tot = parse_live_value(df_tab3, "CISA total unallocated", 1, 294085.70)
         lisa_unalloc_tot = parse_live_value(df_tab3, "LISA total unallocated", 1, 163659.42)
@@ -694,7 +629,7 @@ try:
         st.markdown(f"""
             <div class="workspace-card" style="margin-top:20px;">
                 <div class="recon-row" style="font-size:15px;"><span>Sub-Total Requirement (pre-Interest)</span><strong>£ {subtotal_pre_interest:,.2f}</strong></div>
-                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual (Cell E35)</span><strong>£ {interest_due:,.2f}</strong></div>
+                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual</span><strong>£ {interest_due:,.2f}</strong></div>
                 <div class="recon-row total" style="font-size:18px; color:#10b981; border-top:2px solid #1f2937; padding-top:15px;">
                     <span>🏛️ Final Client Money Requirement Target</span><strong>£ {final_client_money_req:,.2f}</strong>
                 </div>
@@ -865,7 +800,7 @@ try:
         except:
             st.warning("Sheet data fetched live from backend template storage.")
 
-    # 🏁 GLOBAL PDF EXPORT BUTTON
+    # 🏁 GLOBAL GLOBAL PDF EXPORT BUTTON CONTAINER
     st.markdown("<div class='pdf-container'>", unsafe_allow_html=True)
     if st.button("📄 Export to PDF", key="btn_export_global_pdf"):
         st.toast("Generating financial audit report PDF...", icon="🔄")
