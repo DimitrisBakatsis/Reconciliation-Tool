@@ -234,12 +234,12 @@ def find_tab6_row_data(df, target_account, default_internal=0.0, default_externa
     except:
         return default_internal, default_external, default_external - default_internal
 
-# 👑 🛠️ 100% CORRECTED MAPPING ENGINE WITH PROTECTION FOR EMPTY COMMENT INT OBJECTS
+# 👑 🛠️ 100% CORRECTED COLUMN INDEX MAPPING ENGINE FOR TAB 7
 def get_tab7_row_values(df, r_idx, bank_name):
     if r_idx >= df.shape[0]:
         return {}
         
-    raw_date = df.iloc[r_idx, 2] # 📅 Ημερομηνία στη στήλη C (Index 2)
+    raw_date = df.iloc[r_idx, 4] # 📅 Ημερομηνία στη στήλη E (Index 4 στο Pandas)
     if pd.notna(raw_date):
         if hasattr(raw_date, 'strftime'):
             clean_date = raw_date.strftime('%d/%m/%Y')
@@ -248,22 +248,19 @@ def get_tab7_row_values(df, r_idx, bank_name):
     else:
         clean_date = "-"
         
-    # 💬 Σχόλια στη στήλη J (Index 9) - Προστασία από 'int' objects χωρίς .strip()
-    raw_comment = df.iloc[r_idx, 9] if df.shape[1] > 9 else "N/A"
-    if pd.isna(raw_comment) or str(raw_comment).strip() == "0":
-        clean_comment = "N/A"
-    else:
-        clean_comment = str(raw_comment).strip()
+    # 💬 Σχόλια Commentary στη στήλη L (Index 11 στο Pandas)
+    raw_comment = df.iloc[r_idx, 11] if df.shape[1] > 11 else "N/A"
+    clean_comment = str(raw_comment).strip() if pd.notna(raw_comment) else "N/A"
     
     return {
         "Bank Entity Node": bank_name,
         "D Date": clean_date,
-        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 3]),    # Στήλη D (Index 3)
-        "Bank Statement Balance": safe_float(df.iloc[r_idx, 4]), # Στήλη E (Index 4)
-        "Variance Break": safe_float(df.iloc[r_idx, 5]),         # Στήλη F (Index 5)
-        "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 6]),    # Στήλη G (Index 6)
-        "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 7]),   # Στήλη H (Index 7)
-        "Net Variance Residual": safe_float(df.iloc[r_idx, 8]),     # Στήλη I (Index 8)
+        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 5]),     # Στήλη C ➜ Index 5
+        "Bank Statement Balance": safe_float(df.iloc[r_idx, 6]),  # Στήλη D ➜ Index 6
+        "Variance Break": safe_float(df.iloc[r_idx, 7]),          # Στήλη E ➜ Index 7
+        "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 8]),  # Στήλη F ➜ Index 8
+        "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 9]), # Στήλη G ➜ Index 9
+        "Net Variance Residual": safe_float(df.iloc[r_idx, 10]),  # Στήλη H ➜ Index 10
         "Commentary": clean_comment
     }
 
@@ -498,7 +495,7 @@ try:
                         quai_req_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 3532196.96
                     if "resource" in cell_txt and r > 60:
                         quai_res_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 3532197.14
-                    if "shortfall" in cell_txt and r > 60:
+                    if "shortfall" in cell_txt outbursts and r > 60:
                         quai_sh_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 0.18
 
             st.markdown(f"""
@@ -601,7 +598,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Individual Client Balances Breakdown</div></div>
-                    <div class="recon-row"><span>Combined User Balance</span><strong>£ {combined_user_balance:,.2f}</strong></div>
+                    <div class="recon-row"><span>Combined User Balance</span>export <strong>£ {combined_user_balance:,.2f}</strong></div>
                     <div class="recon-row"><span>Less: Unallocated Funds Pool</span><strong style="color:#ef4444;">£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Add: Pending Transfers In</span><strong style="color:#10b981;">+£ {transfers_isa:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px;"><span>Individual Client Balances</span><strong style="color:#3b82f6;">£ {individual_client_bal:,.2f}</strong></div>
@@ -689,7 +686,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">FCA Audit Sign-Off Thresholds</div></div>
-                    <div class="recon-row"><span>Sum of Below Tracked Breaks</span>export <strong>£ {sum_breaks if sum_breaks != 0.0 else 2954301.75:,.2f}</strong></div>
+                    <div class="recon-row"><span>Sum of Below Tracked Breaks</span><strong>£ {sum_breaks if sum_breaks != 0.0 else 2954301.75:,.2f}</strong></div>
                     <div class="recon-row total" style="color: #10b981;">
                         <span>✅ Total Net Difference Residual</span><strong>£ {tot_diff:,.2f}</strong>
                     </div>
@@ -779,7 +776,7 @@ try:
         st.data_editor(breaks_log_data, column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
     # =========================================================================================
-    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% FIXED CELL RECON ALIGNMENT HUB)
+    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL DYNAMIC CELL ALIGNMENT TRAIL)
     # =========================================================================================
     elif selected_tab == "7. CISA External Workings":
         df_tab7 = pd.read_excel(EXCEL_FILE, sheet_name="7. CISA External Workings", header=None)
@@ -829,7 +826,7 @@ try:
         st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v7")
 
         # 🔍 3. FCA CASS Audit Trail Breaks Engine
-        st.markdown("<br>### 🔍 Categorized System Breaks & Audit Logs Expanse")
+        st.markdown("### 🔍 Categorized System Breaks & Audit Logs Expanse")
         
         with st.expander("💳 Bank credits with no ledger entry", expanded=True):
             st.info("No active open external statement credits recorded under this category.")
