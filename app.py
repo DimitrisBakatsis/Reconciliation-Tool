@@ -234,12 +234,12 @@ def find_tab6_row_data(df, target_account, default_internal=0.0, default_externa
     except:
         return default_internal, default_external, default_external - default_internal
 
-# 👑 🛠️ 100% CORRECTED COLUMN INDEX MAPPING ENGINE FOR TAB 7
-def get_tab7_row_values(df, r_idx, bank_name):
+# 👑 🛠️ ADVANCED MERGED CELL ANCHOR PARSER ENGINE FOR TAB 7 COMMENTARY DATA
+def get_tab7_row_values(df, r_idx, bank_name, is_second_row=False):
     if r_idx >= df.shape[0]:
         return {}
         
-    raw_date = df.iloc[r_idx, 4] # 📅 Ημερομηνία στη στήλη E (Index 4 στο Pandas)
+    raw_date = df.iloc[r_idx, 2] # 📅 Ημερομηνία στη στήλη C (Index 2)
     if pd.notna(raw_date):
         if hasattr(raw_date, 'strftime'):
             clean_date = raw_date.strftime('%d/%m/%Y')
@@ -248,19 +248,27 @@ def get_tab7_row_values(df, r_idx, bank_name):
     else:
         clean_date = "-"
         
-    # 💬 Σχόλια Commentary στη στήλη L (Index 11 στο Pandas)
-    raw_comment = df.iloc[r_idx, 11] if df.shape[1] > 11 else "N/A"
-    clean_comment = str(raw_comment).strip() if pd.notna(raw_comment) else "N/A"
+    # 💬 Ανίχνευση σχολίων με προστασία Merged Block:
+    # Αν είμαστε στη 2η σειρά και το κελί είναι κενό, διαβάζουμε αναδρομικά το κελί της 1ης σειράς (r_idx - 1)
+    target_row = r_idx - 1 if (is_second_row and (pd.isna(df.iloc[r_idx, 9]) or str(df.iloc[r_idx, 9]).strip() in ["", "0", "0.0"])) else r_idx
+    
+    clean_comment = "N/A"
+    for col_idx in range(9, min(df.shape[1], 16)):
+        val = df.iloc[target_row, col_idx]
+        if pd.notna(val) and len(str(val).strip()) > 3:
+            if "-" in str(val) or "investigated" in str(val).lower() or "ops" in str(val).lower():
+                clean_comment = str(val).strip()
+                break
     
     return {
         "Bank Entity Node": bank_name,
         "D Date": clean_date,
-        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 5]),     # Στήλη C ➜ Index 5
-        "Bank Statement Balance": safe_float(df.iloc[r_idx, 6]),  # Στήλη D ➜ Index 6
-        "Variance Break": safe_float(df.iloc[r_idx, 7]),          # Στήλη E ➜ Index 7
-        "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 8]),  # Στήλη F ➜ Index 8
-        "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 9]), # Στήλη G ➜ Index 9
-        "Net Variance Residual": safe_float(df.iloc[r_idx, 10]),  # Στήλη H ➜ Index 10
+        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 3]),    # Στήλη D (Index 3)
+        "Bank Statement Balance": safe_float(df.iloc[r_idx, 4]), # Στήλη E (Index 4)
+        "Variance Break": safe_float(df.iloc[r_idx, 5]),         # Στήλη F (Index 5)
+        "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 6]),    # Στήλη G (Index 6)
+        "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 7]),   # Στήλη H (Index 7)
+        "Net Variance Residual": safe_float(df.iloc[r_idx, 8]),     # Στήλη I (Index 8)
         "Commentary": clean_comment
     }
 
@@ -598,7 +606,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Individual Client Balances Breakdown</div></div>
-                    <div class="recon-row"><span>Combined User Balance</span>export <strong>£ {combined_user_balance:,.2f}</strong></div>
+                    <div class="recon-row"><span>Combined User Balance</span><strong>£ {combined_user_balance:,.2f}</strong></div>
                     <div class="recon-row"><span>Less: Unallocated Funds Pool</span><strong style="color:#ef4444;">£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Add: Pending Transfers In</span><strong style="color:#10b981;">+£ {transfers_isa:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px;"><span>Individual Client Balances</span><strong style="color:#3b82f6;">£ {individual_client_bal:,.2f}</strong></div>
@@ -776,7 +784,7 @@ try:
         st.data_editor(breaks_log_data, column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
     # =========================================================================================
-    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL DYNAMIC CELL ALIGNMENT TRAIL)
+    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL LIVE FIXED ROW NODE INDEX MATRIX)
     # =========================================================================================
     elif selected_tab == "7. CISA External Workings":
         df_tab7 = pd.read_excel(EXCEL_FILE, sheet_name="7. CISA External Workings", header=None)
@@ -795,7 +803,7 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🔄 Πίνακας με Dynamic Rows με σκανάρισμα των απόλυτων δεικτών και διορθωμένο merged offset
+        # 🔄 Πίνακας με Dynamic Rows και αναδρομική υποστήριξη συγχωνευμένων κελιών σχολίων
         st.markdown('<div class="table-header-container"><div class="table-title">🔄 Dynamic Statement Verification & Adjusted Banking Ledgers (2 Dates Per Bank Node)</div></div>', unsafe_allow_html=True)
         
         bank_rows_mapping = [
@@ -815,15 +823,15 @@ try:
         
         final_tab7_live_rows = []
         for start_r, end_r, bank_title in bank_rows_mapping:
-            final_tab7_live_rows.append(get_tab7_row_values(df_tab7, start_r, bank_title))
-            final_tab7_live_rows.append(get_tab7_row_values(df_tab7, end_r, bank_title))
+            final_tab7_live_rows.append(get_tab7_row_values(df_tab7, start_r, bank_title, is_second_row=False))
+            final_tab7_live_rows.append(get_tab7_row_values(df_tab7, end_r, bank_title, is_second_row=True))
             
         full_live_recon_df = pd.DataFrame(final_tab7_live_rows)
         if not full_live_recon_df.empty:
             cols_order = ["Bank Entity Node", "D Date", "Plum Ledger Balance", "Bank Statement Balance", "Variance Break", "Adjusted Ledger Target", "Adjusted Bank Statement", "Net Variance Residual", "Commentary"]
             full_live_recon_df = full_live_recon_df[cols_order]
             
-        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v7")
+        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v7_final")
 
         # 🔍 3. FCA CASS Audit Trail Breaks Engine
         st.markdown("### 🔍 Categorized System Breaks & Audit Logs Expanse")
