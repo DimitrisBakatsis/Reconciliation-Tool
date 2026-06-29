@@ -234,30 +234,30 @@ def find_tab6_row_data(df, target_account, default_internal=0.0, default_externa
     except:
         return default_internal, default_external, default_external - default_internal
 
-# 👑 🛠️ 100% CORRECTED COLUMN MAPPING ENGINE FOR TAB 7 BASED ON LIVE DATA SPREADSHEET STRUCT
+# 👑 🛠️ 100% CORRECTED COLUMN MAPPING ENGINE FOR TAB 7 (READING DATES FROM COLUMN C)
 def get_tab7_row_values(df, r_idx, bank_name):
     if r_idx >= df.shape[0]:
         return {}
         
-    raw_date = df.iloc[r_idx, 1] # 📅 Στήλη B (Index 1)
+    raw_date = df.iloc[r_idx, 2] # 📅 Ημερομηνία στη στήλη C (Index 2)
     if pd.notna(raw_date):
         if hasattr(raw_date, 'strftime'):
             clean_date = raw_date.strftime('%d/%m/%Y')
         else:
             clean_date = str(raw_date).split()[0]
     else:
-        clean_date = "16/06/2026"
+        clean_date = "-"
         
-    # 💬 Σχόλια στη στήλη K (Index 10) - Merged block anchor
-    raw_comment = df.iloc[r_idx, 10] if df.shape[1] > 10 else "N/A"
+    # 💬 Σχόλια στη στήλη J (Index 9)
+    raw_comment = df.iloc[r_idx, 9] if df.shape[1] > 9 else "N/A"
     clean_comment = str(raw_comment).strip() if pd.notna(raw_comment) else "N/A"
     
     return {
         "Bank Entity Node": bank_name,
         "D Date": clean_date,
-        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 2]),       # Στήλη C (Index 2)
-        "Bank Statement Balance": safe_float(df.iloc[r_idx, 4]),    # Στήλη E (Index 4)
-        "Variance Break": safe_float(df.iloc[r_idx, 5]),            # Στήλη F (Index 5)
+        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 3]),    # Στήλη D (Index 3)
+        "Bank Statement Balance": safe_float(df.iloc[r_idx, 4]), # Στήλη E (Index 4)
+        "Variance Break": safe_float(df.iloc[r_idx, 5]),         # Στήλη F (Index 5)
         "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 6]),    # Στήλη G (Index 6)
         "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 7]),   # Στήλη H (Index 7)
         "Net Variance Residual": safe_float(df.iloc[r_idx, 8]),     # Στήλη I (Index 8)
@@ -501,7 +501,7 @@ try:
             st.markdown(f"""
                 <div style="background-color: #11141d; padding: 15px; border-radius: 6px; border: 1px solid #1f2937; margin-bottom: 20px;">
                     <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS (LIVE CELLS K66-K68)</span><br>
-                    <div class="recon-row"><span>Requirement</span><strong>£ {quai_req_val:,.2f}</strong></div>
+                    <div class="recon-row"><span>Requirement</span>#<strong>£ {quai_req_val:,.2f}</strong></div>
                     <div class="recon-row"><span>Resource</span><strong>£ {quai_res_val:,.2f}</strong></div>
                     <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
                 </div>
@@ -608,7 +608,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments</div></div>
-                    <div class="recon-row"><span>Unallocated Balances Pool</span><strong>£ {less_unallocated:,.2f}</strong></div>
+                    <div class="recon-row"><span>Unallocated Balances Pool</span>mathbf <strong>£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">£ {temp_tx_funding:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding:,.2f}</strong></div>
                 </div>
@@ -748,7 +748,7 @@ try:
             {"Provider": "BBVA", "Type of Account": "Easy access", "Internal Holdings (Ledger)": bbva_i, "External Holdings Statement": bbva_e, "Difference": bbva_d},
             {"Provider": "BBVA", "Type of Account": "Notice account", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 95 Day Notice", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
-            {"Provider": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 30 Day Notice", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Provider": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 30 Day Notice", "Internal Holdings (Led Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA Instant access", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "JP Morgan", "Type of Account": "JP Morgan Client Money account (76919)", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "TOTAL", "Type of Account": "", "Internal Holdings (Ledger)": 2390477301.00, "External Holdings Statement": 2390477301.00, "Difference": 0.0}
@@ -775,13 +775,13 @@ try:
         ]
         st.data_editor(pd.DataFrame(breaks_log_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
-    # =========================================================================================
-    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% FIXED CELL RECON ALIGNMENT HUB)
-    # =========================================================================================
+    # ==========================================
+    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (FINALLY 100% FIXED COLUMN TO COLUMN REAL MATRIX MATCH)
+    # ==========================================
     elif selected_tab == "7. CISA External Workings":
         df_tab7 = pd.read_excel(EXCEL_FILE, sheet_name="7. CISA External Workings", header=None)
         
-        # 📊 Top Summary Panels
+        # Top Summary Panel
         combined_plum_ledger = safe_float(df_tab7.iloc[23, 13])
         
         st.markdown("### 🏛️ CISA External Cash Workings & Multi-Banking Ledgers")
@@ -795,7 +795,6 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🔄 Πίνακας με Dynamic Rows με σκανάρισμα των απόλυτων δεικτών και διορθωμένο merged offset
         st.markdown('<div class="table-header-container"><div class="table-title">🔄 Dynamic Statement Verification & Adjusted Banking Ledgers (2 Dates Per Bank Node)</div></div>', unsafe_allow_html=True)
         
         bank_rows_mapping = [
@@ -823,7 +822,7 @@ try:
             cols_order = ["Bank Entity Node", "D Date", "Plum Ledger Balance", "Bank Statement Balance", "Variance Break", "Adjusted Ledger Target", "Adjusted Bank Statement", "Net Variance Residual", "Commentary"]
             full_live_recon_df = full_live_recon_df[cols_order]
             
-        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v6")
+        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v100")
 
         # 🔍 3. FCA CASS Audit Trail Breaks Engine
         st.markdown("<br>### 🔍 Categorized System Breaks & Audit Logs Expanse")
