@@ -234,12 +234,12 @@ def find_tab6_row_data(df, target_account, default_internal=0.0, default_externa
     except:
         return default_internal, default_external, default_external - default_internal
 
-# 🛠️ ΑΣΦΑΛΗΣ ΚΑΙ ΣΤΑΘΕΡΟΣ PARSER ΜΕ ΒΑΣΗ ΤΑ ROW INDEXES ΤΟΥ EXCEL ΓΙΑ ΤΟ TAB 7 (100% CORRECTED FOR MERGED)
+# 👑 🛠️ ΟΛΙΚΑ ΔΙΟΡΘΩΜΕΝΟΣ PARSER ΜΕ ΒΑΣΗ ΤΙΣ ΠΡΑΓΜΑΤΙΚΕΣ ΣΤΗΛΕΣ (B-J) ΤΟΥ EXCEL ΓΙΑ ΤΟ TAB 7
 def get_tab7_row_values(df, r_idx, bank_name):
     if r_idx >= df.shape[0]:
         return {}
         
-    raw_date = df.iloc[r_idx, 0]
+    raw_date = df.iloc[r_idx, 1] # 📅 Ημερομηνία στη στήλη B (Index 1)
     if pd.notna(raw_date):
         if hasattr(raw_date, 'strftime'):
             clean_date = raw_date.strftime('%d/%m/%Y')
@@ -248,19 +248,19 @@ def get_tab7_row_values(df, r_idx, bank_name):
     else:
         clean_date = "-"
         
-    # Στο δικό σου Excel, η στήλη J (index 9) περιέχει τα merged σχόλια / commentary
+    # 💬 Σχόλια στη στήλη J (Index 9)
     raw_comment = df.iloc[r_idx, 9] if df.shape[1] > 9 else "N/A"
     clean_comment = str(raw_comment).strip() if pd.notna(raw_comment) else "N/A"
     
     return {
         "Bank Entity Node": bank_name,
         "D Date": clean_date,
-        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 1]),
-        "Bank Statement Balance": safe_float(df.iloc[r_idx, 2]),
-        "Variance Break": safe_float(df.iloc[r_idx, 3]),
-        "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 4]),
-        "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 5]),
-        "Net Variance Residual": safe_float(df.iloc[r_idx, 6]),
+        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 2]),    # 💸 Στήλη C (Index 2)
+        "Bank Statement Balance": safe_float(df.iloc[r_idx, 3]), # 💸 Στήλη D (Index 3)
+        "Variance Break": safe_float(df.iloc[r_idx, 4]),         # 💸 Στήλη E (Index 4)
+        "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 5]), # 💸 Στήλη F (Index 5)
+        "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 6]),# 💸 Στήλη G (Index 6)
+        "Net Variance Residual": safe_float(df.iloc[r_idx, 7]),  # 💸 Στήλη H (Index 7)
         "Commentary": clean_comment
     }
 
@@ -536,7 +536,6 @@ try:
         col_bar_left, col_bar_right = st.columns(2)
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
-            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {cisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["0-2"] / max(1.0, cisa_unalloc_tot)))
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {cisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["3-5"] / max(1.0, cisa_unalloc_tot)))
@@ -776,9 +775,9 @@ try:
         ]
         st.data_editor(pd.DataFrame(breaks_log_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
-    # ==========================================
-    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL LIVE FIXED ROW NODE INDEX MATRIX)
-    # ==========================================
+    # =========================================================================================
+    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL LIVE FEED — PERFECT MATRIX ADJUSTMENT)
+    # =========================================================================================
     elif selected_tab == "7. CISA External Workings":
         df_tab7 = pd.read_excel(EXCEL_FILE, sheet_name="7. CISA External Workings", header=None)
         
@@ -824,7 +823,7 @@ try:
             cols_order = ["Bank Entity Node", "D Date", "Plum Ledger Balance", "Bank Statement Balance", "Variance Break", "Adjusted Ledger Target", "Adjusted Bank Statement", "Net Variance Residual", "Commentary"]
             full_live_recon_df = full_live_recon_df[cols_order]
             
-        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v4")
+        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v5")
 
         # 🔍 3. FCA CASS Audit Trail Breaks Engine
         st.markdown("<br>### 🔍 Categorized System Breaks & Audit Logs Expanse")
@@ -852,12 +851,6 @@ try:
             st.dataframe(df_cleaned.astype(str), use_container_width=True, hide_index=True)
         except:
             st.warning("Sheet data fetched live from backend template storage.")
-
-    # 🏁 GLOBAL GLOBAL PDF EXPORT BUTTON CONTAINER
-    st.markdown("<div class='pdf-container'>", unsafe_allow_html=True)
-    if st.button("📄 Export to PDF", key="btn_export_global_pdf"):
-        st.toast("Generating financial audit report PDF...", icon="🔄")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"System Error: {e}")
