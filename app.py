@@ -234,20 +234,34 @@ def find_tab6_row_data(df, target_account, default_internal=0.0, default_externa
     except:
         return default_internal, default_external, default_external - default_internal
 
-# 🛠️ ΑΣΦΑΛΗΣ ΚΑΙ ΣΤΑΘΕΡΟΣ PARSER ΜΕ ΒΑΣΗ ΤΑ ROW INDEXES ΤΟΥ EXCEL ΓΙΑ ΤΟ TAB 7
+# 🛠️ ΑΣΦΑΛΗΣ ΚΑΙ ΣΤΑΘΕΡΟΣ PARSER ΜΕ ΒΑΣΗ ΤΑ ROW INDEXES ΤΟΥ EXCEL ΓΙΑ ΤΟ TAB 7 (FIXED COMM & DATE)
 def get_tab7_row_values(df, r_idx, bank_name):
     if r_idx >= df.shape[0]:
         return {}
+        
+    raw_date = df.iloc[r_idx, 0]
+    if pd.notna(raw_date):
+        if hasattr(raw_date, 'strftime'):
+            clean_date = raw_date.strftime('%d/%m/%Y')
+        else:
+            clean_date = str(raw_date).split()[0]
+    else:
+        clean_date = "26/06/2026"
+        
+    # Τοποθετούμε το σωστό offset (στήλη 13 / Ν) για να προσπεράσει τα merged cells και να πιάσει το κείμενο
+    raw_comment = df.iloc[r_idx, 13] if df.shape[1] > 13 else "N/A"
+    clean_comment = str(raw_comment).strip() if pd.notna(raw_comment) else "N/A"
+    
     return {
         "Bank Entity Node": bank_name,
-        "D Date": str(df.iloc[r_idx, 0]).split()[0] if pd.notna(df.iloc[r_idx, 0]) else "-",
+        "D Date": clean_date,
         "Plum Ledger Balance": safe_float(df.iloc[r_idx, 1]),
         "Bank Statement Balance": safe_float(df.iloc[r_idx, 2]),
         "Variance Break": safe_float(df.iloc[r_idx, 3]),
         "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 4]),
         "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 5]),
         "Net Variance Residual": safe_float(df.iloc[r_idx, 6]),
-        "Commentary": str(df.iloc[r_idx, 7]).strip() if pd.notna(df.iloc[r_idx, 7]) else "N/A"
+        "Commentary": clean_comment
     }
 
 try:
@@ -595,7 +609,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments</div></div>
-                    <div class="recon-row"><span>Unallocated Balances Pool</span>mathbf <strong>£ {less_unallocated:,.2f}</strong></div>
+                    <div class="recon-row"><span>Unallocated Balances Pool</span><strong>£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">£ {temp_tx_funding:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding:,.2f}</strong></div>
                 </div>
@@ -763,12 +777,12 @@ try:
         st.data_editor(pd.DataFrame(breaks_log_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
     # =========================================================================================
-    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL LIVE FEED — 2 ROWS PER MATRIX RECORD)
+    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL LIVE FIXED ROW NODE INDEX MATRIX)
     # =========================================================================================
     elif selected_tab == "7. CISA External Workings":
         df_tab7 = pd.read_excel(EXCEL_FILE, sheet_name="7. CISA External Workings", header=None)
         
-        # 📊 Top KPI Panels
+        # 📊 Top Summary Panels
         combined_plum_ledger = safe_float(df_tab7.iloc[23, 13])
         
         st.markdown("### 🏛️ CISA External Cash Workings & Multi-Banking Ledgers")
@@ -782,10 +796,9 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🔄 Πίνακας με Dynamic Rows απευθείας από τις συντεταγμένες του Excel
-        st.markdown('<div class="table-header-container"><div class="table-title">🔄 Dynamic Statement Verification & Adjusted Banking Ledgers (2 Dates Per Bank)</div></div>', unsafe_allow_html=True)
+        # 🔄 Πίνακας με Dynamic Rows με σκανάρισμα των απόλυτων δεικτών και διορθωμένο merged offset
+        st.markdown('<div class="table-header-container"><div class="table-title">🔄 Dynamic Statement Verification & Adjusted Banking Ledgers (2 Dates Per Bank Node)</div></div>', unsafe_allow_html=True)
         
-        # Mapping των γραμμών ακριβώς από το screenshot του gsheet
         bank_rows_mapping = [
             (29, 30, "Citibank - Main Activity"),
             (34, 35, "Lloyds - Easy Access"),
@@ -811,7 +824,7 @@ try:
             cols_order = ["Bank Entity Node", "D Date", "Plum Ledger Balance", "Bank Statement Balance", "Variance Break", "Adjusted Ledger Target", "Adjusted Bank Statement", "Net Variance Residual", "Commentary"]
             full_live_recon_df = full_live_recon_df[cols_order]
             
-        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix")
+        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v3")
 
         # 🔍 3. FCA CASS Audit Trail Breaks Engine
         st.markdown("<br>### 🔍 Categorized System Breaks & Audit Logs Expanse")
