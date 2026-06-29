@@ -865,19 +865,6 @@ try:
         df_tab3_live = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
         cisa_unalloc_val = parse_live_value(df_tab3_live, "CISA total unallocated", 1, 294085.70)
         cisa_buckets_live, _ = compute_unalloc_aging_buckets(df_tab3_live)
-        
-        # Επιδιόρθωση και επαναφορά του τίτλου, bullet icon, και του live ποσού για το 0-2 Days bucket
-        st.markdown(f"""
-            <script>
-            window.addEventListener('load', function() {{
-                const wrappers = parent.document.querySelectorAll(".aging-bar-label");
-                if (wrappers.length > 0) {{
-                    const targetNode = wrappers[0];
-                    targetNode.innerHTML = '<span>🟢 0-2 Days (Low Risk)</span><span>£ {cisa_buckets_live["0-2"]:,.2f}</span>';
-                }}
-            }});
-            </script>
-        """, unsafe_allow_html=True)
 
     # 🏁 GLOBAL GLOBAL PDF EXPORT BUTTON CONTAINER
     st.markdown("<div class='pdf-container'>", unsafe_allow_html=True)
