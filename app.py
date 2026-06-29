@@ -351,7 +351,7 @@ try:
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title" style="color: #a78bfa; font-weight: 700;">COMBINED USER BALANCE CHECK - CISA</div></div>
                     <div class="recon-row"><span>Internal CUB from previous day</span><strong>£ {cisa_prev:,.2f}</strong></div>
-                    <div class="recon-row"><span>Debits (Recon data) from Rec data</span>log <strong>£ {cisa_deb:,.2f}</strong></div>
+                    <div class="recon-row"><span>Debits (Recon data) from Rec data</span><strong>£ {cisa_deb:,.2f}</strong></div>
                     <div class="recon-row"><span>Credits (Recon data) from Rec data</span><strong>£ {cisa_cred:,.2f}</strong></div>
                     <div class="recon-row total"><span style="color: #3b82f6;">Total</span><strong style="color: #3b82f6;">£ {cisa_tot:,.2f}</strong></div>
                     <br><br>
