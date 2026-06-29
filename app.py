@@ -495,7 +495,7 @@ try:
                         quai_req_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 3532196.96
                     if "resource" in cell_txt and r > 60:
                         quai_res_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 3532197.14
-                    if "shortfall" in cell_txt outbursts and r > 60:
+                    if "shortfall" in cell_txt and r > 60:
                         quai_sh_val = safe_float(df_tab2.iloc[r, col + 1]) if safe_float(df_tab2.iloc[r, col + 1]) != 0.0 else 0.18
 
             st.markdown(f"""
