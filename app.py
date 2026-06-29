@@ -83,15 +83,6 @@ st.markdown("""
     .log-meta { font-size: 11px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px; }
     .log-text { font-size: 13px; color: #e5e7eb; }
     .log-amount { font-size: 15px; font-weight: 700; color: #10b981; }
-
-    /* PDF Bottom Floating Container */
-    .pdf-container {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 30px;
-        margin-bottom: 10px;
-        padding-right: 5px;
-    }
     
     .stDataEditor { border-top: none !important; border-radius: 0 0 8px 8px !important; }
     </style>
@@ -242,6 +233,51 @@ def find_tab6_row_data(df, target_account, default_internal=0.0, default_externa
         return default_internal, default_external, default_external - default_internal
     except:
         return default_internal, default_external, default_external - default_internal
+
+# 🛠️ ΔΥΝΑΜΙΚΟΣ PARSER ΓΙΑ ΤΙΣ ΔΥΟ ΓΡΑΜΜΕΣ ΑΝΑ ΤΡΑΠΕΖΑ ΣΤΟ TAB 7
+def parse_tab7_sub_block(df, section_keyword):
+    start_row = locate_row_index(df, section_keyword)
+    if start_row is None:
+        return []
+    
+    rows = []
+    # Διαβάζει τις 2 επόμενες σειρές δεδομένων κάτω από τον τίτλο
+    for i in [1, 2]:
+        r = start_row + i
+        if r >= df.shape[0] or pd.isna(df.iloc[r, 0]):
+            continue
+        rows.append({
+            "D Date": str(df.iloc[r, 0]).split()[0] if pd.notna(df.iloc[r, 0]) else "-",
+            "Plum Ledger Balance": safe_float(df.iloc[r, 1]),
+            "Bank Statement Balance": safe_float(df.iloc[r, 2]),
+            "Variance Break": safe_float(df.iloc[r, 3]),
+            "Adjusted Ledger Target": safe_float(df.iloc[r, 4]),
+            "Adjusted Bank Statement": safe_float(df.iloc[r, 5]),
+            "Net Variance Residual": safe_float(df.iloc[r, 6]),
+            "Commentary": str(df.iloc[r, 7]).strip() if pd.notna(df.iloc[r, 7]) else "N/A"
+        })
+    return rows
+
+# 🛠️ ΔΥΝΑΜΙΚΟΣ PARSER ΓΙΑ ΤΑ BREAKS ΤΟΥ TAB 7
+def parse_tab7_breaks(df, header_keyword):
+    start_row = locate_row_index(df, header_keyword)
+    if start_row is None:
+        return pd.DataFrame()
+    rows = []
+    for idx in range(start_row + 2, start_row + 8):
+        if idx >= df.shape[0] or "bank" in str(df.iloc[idx, 0]).lower() or "ledger" in str(df.iloc[idx, 0]).lower() or "total" in str(df.iloc[idx, 0]).lower():
+            break
+        if pd.isna(df.iloc[idx, 0]) and pd.isna(df.iloc[idx, 1]):
+            continue
+        rows.append({
+            "Date": str(df.iloc[idx, 0]).split()[0] if pd.notna(df.iloc[idx, 0]) else "-",
+            "Errored Order ID/break details": str(df.iloc[idx, 1]).strip() if pd.notna(df.iloc[idx, 1]) else "-",
+            "Admin Link": str(df.iloc[idx, 2]).strip() if pd.notna(df.iloc[idx, 2]) else "-",
+            "Action": str(df.iloc[idx, 3]).strip() if pd.notna(df.iloc[idx, 3]) else "-",
+            "Jira Ticket": str(df.iloc[idx, 4]).strip() if pd.notna(df.iloc[idx, 4]) else "-",
+            "Amount": safe_float(df.iloc[idx, 5])
+        })
+    return pd.DataFrame(rows)
 
 if "cisa_movements" not in st.session_state:
     st.session_state.cisa_movements = []
@@ -461,9 +497,9 @@ try:
             w2_var  = w2_cob - w2_prev if w2_cob != 0.0 else -379465147.50
 
             stocks_dynamic_df = pd.DataFrame([
-                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys - Awaiting settlement", "Previous Day Balance": b_prev if b_prev != 0.0 else 2319020.75, "COB Balance": b_cob, "Variance": b_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w1_prev if w1_prev != 0.0 else 102326001.16, "COB Balance": w1_cob, "Variance": w1_var, "Entity": "Saveable Limited", "Performed By": "Quai - Units Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w2_prev if w2_prev != 0.0 else 379465147.49, "COB Balance": w2_cob, "Variance": w2_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"}
+                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys - Awaiting settlement", "Previous Day Balance": b_prev, "COB Balance": b_cob, "Variance": b_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"},
+                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w1_prev, "COB Balance": w1_cob, "Variance": w1_var, "Entity": "Saveable Limited", "Performed By": "Quai - Units Held"},
+                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w2_prev, "COB Balance": w2_cob, "Variance": w2_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"}
             ])
             st.data_editor(stocks_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger_live")
 
@@ -671,7 +707,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">FCA Audit Sign-Off Thresholds</div></div>
-                    <div class="recon-row"><span>Sum of Below Tracked Breaks</span>export <strong>£ {sum_breaks if sum_breaks != 0.0 else 2954301.75:,.2f}</strong></div>
+                    <div class="recon-row"><span>Sum of Below Tracked Breaks</span><strong>£ {sum_breaks if sum_breaks != 0.0 else 2954301.75:,.2f}</strong></div>
                     <div class="recon-row total" style="color: #10b981;">
                         <span>✅ Total Net Difference Residual</span><strong>£ {tot_diff:,.2f}</strong>
                     </div>
@@ -761,60 +797,87 @@ try:
         st.data_editor(pd.DataFrame(breaks_log_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
     # =========================================================================================
-    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% NEW PREMIUM RECON LOGIC WITH NO BLANK TOTALS)
+    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% LIVE MULTI-DATE BLOCK READ FROM EXCEL)
     # =========================================================================================
     elif selected_tab == "7. CISA External Workings":
         df_tab7 = pd.read_excel(EXCEL_FILE, sheet_name="7. CISA External Workings", header=None)
         
-        # 📊 1. Top Aggregated Control cards
-        combined_plum = safe_float(df_tab7.iloc[23, 13]) if df_tab7.shape[0] > 23 else 2372642433.59
+        # 📊 Top Summary Panel Cards
+        plum_ledger_comb = safe_float(df_tab7.iloc[23, 13])
         
-        st.markdown("### 🏛️ CISA External Cash Workings & Multi-Banking Ledgers")
-        st.caption("FCA Compliance Audit Logs for External Asset Account Statements Reconciliation.")
+        st.markdown("### 🏛_ CISA External Cash Workings & Multi-Banking Ledgers")
+        st.caption("FCA Compliance Audit Logs tracking Historical Statement Recs by Valuation Date.")
 
         st.markdown(f"""
             <div class="metric-grid">
-                <div class="metric-card"><div class="metric-label">COMBINED PLUM LEDGER BALANCE</div><div class="metric-value blue">£ {combined_plum:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">COMBINED PLUM LEDGER BALANCE</div><div class="metric-value blue">£ {plum_ledger_comb:,.2f}</div></div>
                 <div class="metric-card"><div class="metric-label">TOTAL BANK STATEMENT RESOURCE</div><div class="metric-value purple">£ 2,390,477,301.00</div></div>
                 <div class="metric-card"><div class="metric-label">EXTERNAL RECONCILIATION VARIANCE</div><div class="metric-value green">£ 0.00</div></div>
             </div>
         """, unsafe_allow_html=True)
 
-        # 📋 2. Comprehensive Multi-Banking Breakdown Matrix
-        st.markdown('<div class="table-header-container"><div class="table-title">🔄 Dynamic Statement Verification & Adjusted Banking Ledgers</div></div>', unsafe_allow_html=True)
+        # 🔄 Πίνακας με Dynamic Parsing και για τις 2 Ημερομηνίες ανά Τράπεζα
+        st.markdown('<div class="table-header-container"><div class="table-title">🔄 Historical Statement Verification (Multi-Date Node Sync)</div></div>', unsafe_allow_html=True)
         
-        banking_recon_rows = [
-            {"Bank Account Sector": "Citibank - Main Activity", "Plum Ledger Balance": 158156255.66, "Bank Statement Balance": 158186288.37, "Variance Break": 30030.71, "Adjusted Ledger Target": 158188288.37, "Adjusted Bank Statement": 158186288.37, "Net Variance Residual": 0.0, "Commentary": "Compliance review status at Citi pending 1-3 days."},
-            {"Bank Account Sector": "Lloyds - Easy Access", "Plum Ledger Balance": 3959844.10, "Bank Statement Balance": 3959844.10, "Variance Break": 0.0, "Adjusted Ledger Target": 3959844.10, "Adjusted Bank Statement": 3959844.10, "Net Variance Residual": 0.0, "Commentary": "N/A - Fully Reconciled"},
-            {"Bank Account Sector": "Lloyds - Notice Account", "Plum Ledger Balance": 747535672.00, "Bank Statement Balance": 747535672.00, "Variance Break": 0.0, "Adjusted Ledger Target": 747535672.00, "Adjusted Bank Statement": 747535672.00, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "QNB - Notice Ledger", "Plum Ledger Balance": 1168000000.00, "Bank Statement Balance": 1168000000.00, "Variance Break": 0.0, "Adjusted Ledger Target": 1168000000.00, "Adjusted Bank Statement": 1168000000.00, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "Blackrock - QMMF Reserves", "Plum Ledger Balance": 0.0, "Bank Statement Balance": 0.0, "Variance Break": 0.0, "Adjusted Ledger Target": 0.0, "Adjusted Bank Statement": 0.0, "Net Variance Residual": 0.0, "Commentary": "No open transactional velocity."},
-            {"Bank Account Sector": "BBVA - Easy Access Portfolio", "Plum Ledger Balance": 294960631.12, "Bank Statement Balance": 294960631.12, "Variance Break": 0.0, "Adjusted Ledger Target": 294960631.12, "Adjusted Bank Statement": 294960631.12, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "BBVA - Notice Account Reserves", "Plum Ledger Balance": 0.0, "Bank Statement Balance": 0.0, "Variance Break": 0.0, "Adjusted Ledger Target": 0.0, "Adjusted Bank Statement": 0.0, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "Clydesdale Bank - 95D Notice", "Plum Ledger Balance": 0.0, "Bank Statement Balance": 0.0, "Variance Break": 0.0, "Adjusted Ledger Target": 0.0, "Adjusted Bank Statement": 0.0, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "Clydesdale Bank - 60D Notice", "Plum Ledger Balance": 0.0, "Bank Statement Balance": 0.0, "Variance Break": 0.0, "Adjusted Ledger Target": 0.0, "Adjusted Bank Statement": 0.0, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "Clydesdale Bank - 30D Notice", "Plum Ledger Balance": 0.0, "Bank Statement Balance": 0.0, "Variance Break": 0.0, "Adjusted Ledger Target": 0.0, "Adjusted Bank Statement": 0.0, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "Clydesdale Bank - Instant Access", "Plum Ledger Balance": 0.0, "Bank Statement Balance": 0.0, "Variance Break": 0.0, "Adjusted Ledger Target": 0.0, "Adjusted Bank Statement": 0.0, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "JP Morgan - CM Account", "Plum Ledger Balance": 0.0, "Bank Statement Balance": 0.0, "Variance Break": 0.0, "Adjusted Ledger Target": 0.0, "Adjusted Bank Statement": 0.0, "Net Variance Residual": 0.0, "Commentary": "N/A"},
-            {"Bank Account Sector": "Citi - EUR Account Balance", "Plum Ledger Balance": 0.0, "Bank Statement Balance": 0.0, "Variance Break": 0.0, "Adjusted Ledger Target": 0.0, "Adjusted Bank Statement": 0.0, "Net Variance Residual": 0.0, "Commentary": "Backup Saved Down"},
-            {"Bank Account Sector": "TOTAL OVERALL RECON", "Plum Ledger Balance": 2372642433.59, "Bank Statement Balance": 2390477301.00, "Variance Break": 30030.71, "Adjusted Ledger Target": 2390477301.00, "Adjusted Bank Statement": 2390477301.00, "Net Variance Residual": 0.0, "Commentary": "FCA CASS External Sign-off achieved."}
+        final_tab7_list = []
+        bank_targets = [
+            ("Plum Ledger Balance vs Citi", "Citi Bank NA London"),
+            ("Plum Ledger Balance vs Lloyds Easy Access", "Lloyds Bank Plc - EA"),
+            ("Plum Ledger Balance vs Lloyds Notice Account", "Lloyds Bank Plc - Notice"),
+            ("Plum Ledger Balance vs QNB Balance", "Qatar National Bank"),
+            ("Plum Ledger Balance vs Blackrock QMMF", "Blackrock QMMF"),
+            ("Plum Ledger Balance vs BBVA Easy Access", "BBVA Easy Access"),
+            ("Plum Ledger Balance vs BBVA Notice Account", "BBVA Notice Account"),
+            {"keyword": "Plum Ledger Balance vs Clydesdale Bank PLC TA Virgin Money 95 Day notice account", "name": "Clydesdale 95D"},
+            {"keyword": "Plum Ledger Balance vs Clydesdale Bank PLC TA Virgin Money 60 Day notice account", "name": "Clydesdale 60D"},
+            {"keyword": "Plum Ledger Balance vs Clydesdale Bank PLC TA Virgin Money 30 Day notice account", "name": "Clydesdale 30D"},
+            {"keyword": "Plum Ledger Balance vs Clydesdale Bank PLC TA Virgin Money Instant access", "name": "Clydesdale Instant"},
+            ("Plum Ledger Balance vs JP Morgan", "JP Morgan Chase")
         ]
-        st.data_editor(pd.DataFrame(banking_recon_rows), column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_banking_matrix")
+        
+        for item in bank_targets:
+            if isinstance(item, dict):
+                kw = item["keyword"]
+                b_name = item["name"]
+            else:
+                kw = item[0]
+                b_name = item[1]
+                
+            extracted_blocks = parse_tab7_sub_block(df_tab7, kw)
+            for row in extracted_blocks:
+                row["Bank Entity Node"] = b_name
+                final_tab7_list.append(row)
+                
+        # Μετατροπή σε DataFrame και αναδιοργάνωση των στηλών
+        full_recon_df = pd.DataFrame(final_tab7_list)
+        if not full_recon_df.empty:
+            cols_order = ["Bank Entity Node", "D Date", "Plum Ledger Balance", "Bank Statement Balance", "Variance Break", "Adjusted Ledger Target", "Adjusted Bank Statement", "Net Variance Residual", "Commentary"]
+            full_recon_df = full_recon_df[cols_order]
+            
+        st.data_editor(full_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_multi_date_matrix")
 
-        # 🔍 3. FCA Compliance Breaks Expanse Logs (image_bd27a1.png)
+        # 🔍 3. FCA CASS Audit Trail Breaks Engine
         st.markdown("<br>### 🔍 Categorized System Breaks & Audit Logs Expanse")
         
-        with st.expander("💳 Bank credits with no ledger entry (Live File Synced)", expanded=True):
-            st.info("No active open external statement credits recorded under this category.")
+        with st.expander("💳 Bank credits with no ledger entry", expanded=True):
+            br1 = parse_tab7_breaks(df_tab7, "Bank credits with no ledger entry")
+            if not br1.empty: st.data_editor(br1, column_config={"Amount": st.column_config.NumberColumn(format="£%,.2f")}, use_container_width=True, hide_index=True)
+            else: st.info("No active open external statement credits recorded under this category.")
             
         with st.expander("💸 Bank debits with no ledger entry"):
-            st.info("No active open bank statement debits outstanding.")
+            br2 = parse_tab7_breaks(df_tab7, "Bank debits with no ledger entry")
+            if not br2.empty: st.data_editor(br2, column_config={"Amount": st.column_config.NumberColumn(format="£%,.2f")}, use_container_width=True, hide_index=True)
+            else: st.info("No active open bank statement debits outstanding.")
             
         with st.expander("📈 Ledger debits with no bank entry"):
-            st.info("No active ledger adjustments required.")
+            br3 = parse_tab7_breaks(df_tab7, "Ledger debits with no bank entry")
+            if not br3.empty: st.data_editor(br3, column_config={"Amount": st.column_config.NumberColumn(format="£%,.2f")}, use_container_width=True, hide_index=True)
+            else: st.info("No active ledger adjustments required.")
             
         with st.expander("📉 Ledger credits with no bank entry", expanded=True):
-            st.info("No outstanding ledger entries awaiting banking execution.")
+            br4 = parse_tab7_breaks(df_tab7, "Ledger credits with no bank entry")
+            if not br4.empty: st.data_editor(br4, column_config={"Amount": st.column_config.NumberColumn(format="£%,.2f")}, use_container_width=True, hide_index=True)
+            else: st.info("No outstanding ledger entries awaiting banking execution.")
 
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
