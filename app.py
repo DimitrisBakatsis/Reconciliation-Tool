@@ -855,8 +855,8 @@ try:
         df_tab12 = pd.read_excel(EXCEL_FILE, sheet_name="12. LISA External Workings", header=None)
         
         # 📊 Top Summary Panels
-        combined_plum_ledger = safe_float(df_tab12.iloc[21, 11])
-        total_bank = safe_float(df_tab12.iloc[21, 11])
+        combined_plum_ledger = safe_float(df_tab12.iloc[23, 13])
+        total_bank = safe_float(df_tab12.iloc[23, 13])
         
         st.markdown("### 🏛️ LISA External Cash Workings & Multi-Banking Ledgers")
         st.caption("FCA Compliance Audit Logs for External Asset Account Statements Reconciliation.")
