@@ -889,8 +889,8 @@ try:
         
         final_tab12_live_rows = []
         for start_r, end_r, bank_title in bank_rows_mapping:
-            final_tab12_live_rows.append(get_tab7_row_values(df_tab12, start_r, bank_title, is_second_row=False))
-            final_tab12_live_rows.append(get_tab7_row_values(df_tab12, end_r, bank_title, is_second_row=True))
+            final_tab12_live_rows.append(get_tab12_row_values(df_tab12, start_r, bank_title, is_second_row=False))
+            final_tab12_live_rows.append(get_tab12_row_values(df_tab12, end_r, bank_title, is_second_row=True))
             
         full_live_recon_df = pd.DataFrame(final_tab12_live_rows)
         if not full_live_recon_df.empty:
