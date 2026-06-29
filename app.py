@@ -234,7 +234,7 @@ def find_tab6_row_data(df, target_account, default_internal=0.0, default_externa
     except:
         return default_internal, default_external, default_external - default_internal
 
-# 👑 🛠️ ADVANCED MERGED CELL ANCHOR PARSER ENGINE FOR TAB 7 COMMENTARY DATA
+# 👑 🛠️ 100% CORRECTED COLUMN INDEX MAPPING ENGINE FOR TAB 7
 def get_tab7_row_values(df, r_idx, bank_name, is_second_row=False):
     if r_idx >= df.shape[0]:
         return {}
@@ -248,27 +248,24 @@ def get_tab7_row_values(df, r_idx, bank_name, is_second_row=False):
     else:
         clean_date = "-"
         
-    # 💬 Ανίχνευση σχολίων με προστασία Merged Block:
-    # Αν είμαστε στη 2η σειρά και το κελί είναι κενό, διαβάζουμε αναδρομικά το κελί της 1ης σειράς (r_idx - 1)
-    target_row = r_idx - 1 if (is_second_row and (pd.isna(df.iloc[r_idx, 9]) or str(df.iloc[r_idx, 9]).strip() in ["", "0", "0.0"])) else r_idx
+    # 💬 Σχόλια Commentary στη στήλη L (Index 11 στο Pandas)
+    target_row = r_idx - 1 if (is_second_row and (pd.isna(df.iloc[r_idx, 11]) or str(df.iloc[r_idx, 11]).strip() in ["", "0", "0.0"])) else r_idx
+    raw_comment = df.iloc[target_row, 11] if df.shape[1] > 11 else "N/A"
     
-    clean_comment = "N/A"
-    for col_idx in range(9, min(df.shape[1], 16)):
-        val = df.iloc[target_row, col_idx]
-        if pd.notna(val) and len(str(val).strip()) > 3:
-            if "-" in str(val) or "investigated" in str(val).lower() or "ops" in str(val).lower():
-                clean_comment = str(val).strip()
-                break
+    if pd.isna(raw_comment) or str(raw_comment).strip() == "0":
+        clean_comment = "N/A"
+    else:
+        clean_comment = str(raw_comment).strip()
     
     return {
         "Bank Entity Node": bank_name,
         "D Date": clean_date,
-        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 3]),    # Στήλη D (Index 3)
-        "Bank Statement Balance": safe_float(df.iloc[r_idx, 4]), # Στήλη E (Index 4)
-        "Variance Break": safe_float(df.iloc[r_idx, 5]),         # Στήλη F (Index 5)
-        "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 6]),    # Στήλη G (Index 6)
-        "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 7]),   # Στήλη H (Index 7)
-        "Net Variance Residual": safe_float(df.iloc[r_idx, 8]),     # Στήλη I (Index 8)
+        "Plum Ledger Balance": safe_float(df.iloc[r_idx, 5]),     # Στήλη C ➜ Index 5
+        "Bank Statement Balance": safe_float(df.iloc[r_idx, 6]),  # Στήλη D ➜ Index 6
+        "Variance Break": safe_float(df.iloc[r_idx, 7]),          # Στήλη E ➜ Index 7
+        "Adjusted Ledger Target": safe_float(df.iloc[r_idx, 8]),  # Στήλη F ➜ Index 8
+        "Adjusted Bank Statement": safe_float(df.iloc[r_idx, 9]), # Στήλη G ➜ Index 9
+        "Net Variance Residual": safe_float(df.iloc[r_idx, 10]),  # Στήλη H ➜ Index 10
         "Commentary": clean_comment
     }
 
@@ -413,7 +410,7 @@ try:
             {"Bank": "Lloyds Bank Plc", "Account": "Saveable Cash ISA Client Account (27551460)", "Previous Day Balance": parse_live_value(df_tab2, "27551460", -1, 1001402.14), "COB Balance": parse_live_value(df_tab2, "27551460", 0, 0.0), "Variance": parse_live_value(df_tab2, "27551460", 1, 0.0), "Live Commentary": cisa_lloyds_ea},
             {"Bank": "Lloyds Bank Plc", "Account": "Saveable Cash ISA 30D Notice Client Account (27571468)", "Previous Day Balance": parse_live_value(df_tab2, "27571468", -1, 0.0), "COB Balance": parse_live_value(df_tab2, "27571468", 0, 0.0), "Variance": parse_live_value(df_tab2, "27571468", 1, 0.0), "Live Commentary": cisa_lloyds_no},
             {"Bank": "QNB", "Account": "Qatar National Bank (4311-000545-310)", "Previous Day Balance": parse_live_value(df_tab2, "4311-000545-310", -1, 1379043.59), "COB Balance": parse_live_value(df_tab2, "4311-000545-310", 0, 0.0), "Variance": parse_live_value(df_tab2, "4311-000545-310", 1, 0.0), "Live Commentary": cisa_qnb_comment},
-            {"Bank": "BBVA", "Account": "BBVA Easy access (01778650)", "Previous Day Balance": parse_live_value(df_tab2, "01778650", -1, 0.0), "COB Balance": parse_live_value(df_tab2, "01778650", 0, 0.0), "Variance": parse_live_value(df_tab2, "01778650", 1, 0.0), "Live Commentary": cisa_bbva_comment}
+            {"Bank": "BBVA", "Account": "BBVA Easy access (01778650)", "Previous Day Balance": parse_live_value(df_tab2, "01778650", -1, 0.0), "COB Balance": parse_live_string(df_tab2, "01778650", 0, "0.0"), "Variance": parse_live_value(df_tab2, "01778650", 1, 0.0), "Live Commentary": cisa_bbva_comment}
         ])
         st.data_editor(cash_isa_df, column_config=currency_config, use_container_width=True, hide_index=True, key="cash_isa_grid")
         
@@ -783,9 +780,9 @@ try:
         ]
         st.data_editor(breaks_log_data, column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
-    # =========================================================================================
-    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL LIVE FIXED ROW NODE INDEX MATRIX)
-    # =========================================================================================
+    # ==========================================
+    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS
+    # ==========================================
     elif selected_tab == "7. CISA External Workings":
         df_tab7 = pd.read_excel(EXCEL_FILE, sheet_name="7. CISA External Workings", header=None)
         
@@ -803,7 +800,7 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🔄 Πίνακας με Dynamic Rows και αναδρομική υποστήριξη συγχωνευμένων κελιών σχολίων
+        # 🔄 Πίνακας με Dynamic Rows με σκανάρισμα των απόλυτων δεικτών και διορθωμένο merged offset
         st.markdown('<div class="table-header-container"><div class="table-title">🔄 Dynamic Statement Verification & Adjusted Banking Ledgers (2 Dates Per Bank Node)</div></div>', unsafe_allow_html=True)
         
         bank_rows_mapping = [
@@ -831,7 +828,7 @@ try:
             cols_order = ["Bank Entity Node", "D Date", "Plum Ledger Balance", "Bank Statement Balance", "Variance Break", "Adjusted Ledger Target", "Adjusted Bank Statement", "Net Variance Residual", "Commentary"]
             full_live_recon_df = full_live_recon_df[cols_order]
             
-        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v7_final")
+        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v7")
 
         # 🔍 3. FCA CASS Audit Trail Breaks Engine
         st.markdown("### 🔍 Categorized System Breaks & Audit Logs Expanse")
@@ -859,6 +856,27 @@ try:
             st.dataframe(df_cleaned.astype(str), use_container_width=True, hide_index=True)
         except:
             st.warning("Sheet data fetched live from backend template storage.")
+
+    # ==========================================
+    # 👑 🔥 TAB 3 DATA COMPILER & REPAIR SUITE
+    # ==========================================
+    if selected_tab == "3. Unalloc Rec":
+        df_tab3_live = pd.read_excel(EXCEL_FILE, sheet_name="3. Unalloc Rec", header=None)
+        cisa_unalloc_val = parse_live_value(df_tab3_live, "CISA total unallocated", 1, 294085.70)
+        cisa_buckets_live, _ = compute_unalloc_aging_buckets(df_tab3_live)
+        
+        # Επιδιόρθωση και επαναφορά του τίτλου, bullet icon, και του live ποσού για το 0-2 Days bucket
+        st.markdown(f"""
+            <script>
+            window.addEventListener('load', function() {{
+                const wrappers = parent.document.querySelectorAll(".aging-bar-label");
+                if (wrappers.length > 0) {{
+                    const targetNode = wrappers[0];
+                    targetNode.innerHTML = '<span>🟢 0-2 Days (Low Risk)</span><span>£ {cisa_buckets_live["0-2"]:,.2f}</span>';
+                }}
+            }});
+            </script>
+        """, unsafe_allow_html=True)
 
     # 🏁 GLOBAL GLOBAL PDF EXPORT BUTTON CONTAINER
     st.markdown("<div class='pdf-container'>", unsafe_allow_html=True)
