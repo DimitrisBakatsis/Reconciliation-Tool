@@ -800,7 +800,7 @@ try:
         st.markdown(f"""
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">COMBINED PLUM LEDGER BALANCE</div><div class="metric-value blue">£ {combined_plum_ledger_cisa:,.2f}</div></div>
-                <div class="metric-card"><div class="metric-label">TOTAL BANK STATEMENT RESOURCE</div><div class="metric-value purple">£ {total_bank_cisa:, .2f}</div></div>
+                <div class="metric-card"><div class="metric-label">TOTAL BANK STATEMENT RESOURCE</div><div class="metric-value purple">£ {total_bank_cisa:,.2f}</div></div>
                 <div class="metric-card"><div class="metric-label">EXTERNAL RECONCILIATION VARIANCE</div><div class="metric-value green">£ 0.00</div></div>
             </div>
         """, unsafe_allow_html=True)
