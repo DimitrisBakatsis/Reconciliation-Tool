@@ -792,7 +792,7 @@ try:
         
         # 📊 Top Summary Panels
         combined_plum_ledger_cisa = safe_float(df_tab7.iloc[23, 13])
-        total_bank_cisa = safe_float(df_tab12.iloc[23, 13])
+        total_bank_cisa = safe_float(df_tab7.iloc[23, 13])
         
         st.markdown("### 🏛️ CISA External Cash Workings & Multi-Banking Ledgers")
         st.caption("FCA Compliance Audit Logs for External Asset Account Statements Reconciliation.")
