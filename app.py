@@ -234,7 +234,7 @@ def find_tab6_row_data(df, target_account, default_internal=0.0, default_externa
     except:
         return default_internal, default_external, default_external - default_internal
 
-# 👑 🛠️ 100% CORRECTED COLUMN MAPPING ENGINE FOR TAB 7 (READING DATES FROM COLUMN C)
+# 👑 🛠️ 100% CORRECTED MAPPING ENGINE WITH COLUMN C FOR DATE & COLUMN J FOR COMMENTARY
 def get_tab7_row_values(df, r_idx, bank_name):
     if r_idx >= df.shape[0]:
         return {}
@@ -248,7 +248,7 @@ def get_tab7_row_values(df, r_idx, bank_name):
     else:
         clean_date = "-"
         
-    # 💬 Σχόλια στη στήλη J (Index 9)
+    # 💬 Σχόλια στη στήλη J (Index 9) - Merged block anchor
     raw_comment = df.iloc[r_idx, 9] if df.shape[1] > 9 else "N/A"
     clean_comment = str(raw_comment).strip() if pd.notna(raw_comment) else "N/A"
     
@@ -477,9 +477,9 @@ try:
             w2_var  = w2_cob - w2_prev if w2_cob != 0.0 else -379465147.50
 
             stocks_dynamic_df = pd.DataFrame([
-                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys - Awaiting settlement", "Previous Day Balance": b_prev if b_prev != 0.0 else 2319020.75, "COB Balance": b_cob, "Variance": b_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w1_prev if w1_prev != 0.0 else 102326001.16, "COB Balance": w1_cob, "Variance": w1_var, "Entity": "Saveable Limited", "Performed By": "Quai - Units Held"},
-                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w2_prev if w2_prev != 0.0 else 379465147.49, "COB Balance": w2_cob, "Variance": w2_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"}
+                {"Bank": "Barclays UK PLC", "Account": "SAVEABLE LTD (90314552) - Pending Sells/Buys - Awaiting settlement", "Previous Day Balance": b_prev, "COB Balance": b_cob, "Variance": b_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"},
+                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w1_prev, "COB Balance": w1_cob, "Variance": w1_var, "Entity": "Saveable Limited", "Performed By": "Quai - Units Held"},
+                {"Bank": "Winterfloods", "Account": "SAVEABLE LTD", "Previous Day Balance": w2_prev, "COB Balance": w2_cob, "Variance": w2_var, "Entity": "Saveable Limited", "Performed By": "Quai - Cash Held"}
             ])
             st.data_editor(stocks_dynamic_df, column_config=currency_config, use_container_width=True, hide_index=True, key="stocks_sub_ledger_live")
 
@@ -501,7 +501,7 @@ try:
             st.markdown(f"""
                 <div style="background-color: #11141d; padding: 15px; border-radius: 6px; border: 1px solid #1f2937; margin-bottom: 20px;">
                     <span style="font-size:12px; font-weight:700; color:#a78bfa;">QUAI RESOURCE & REQUIREMENT TARGETS (LIVE CELLS K66-K68)</span><br>
-                    <div class="recon-row"><span>Requirement</span>#<strong>£ {quai_req_val:,.2f}</strong></div>
+                    <div class="recon-row"><span>Requirement</span><strong>£ {quai_req_val:,.2f}</strong></div>
                     <div class="recon-row"><span>Resource</span><strong>£ {quai_res_val:,.2f}</strong></div>
                     <div class="recon-row total"><span>Shortfall / Surplus</span><strong>£ {quai_sh_val:,.2f}</strong></div>
                 </div>
@@ -608,7 +608,7 @@ try:
             st.markdown(f"""
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments</div></div>
-                    <div class="recon-row"><span>Unallocated Balances Pool</span>mathbf <strong>£ {less_unallocated:,.2f}</strong></div>
+                    <div class="recon-row"><span>Unallocated Balances Pool</span><strong>£ {less_unallocated:,.2f}</strong></div>
                     <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">£ {temp_tx_funding:,.2f}</strong></div>
                     <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding:,.2f}</strong></div>
                 </div>
@@ -748,12 +748,12 @@ try:
             {"Provider": "BBVA", "Type of Account": "Easy access", "Internal Holdings (Ledger)": bbva_i, "External Holdings Statement": bbva_e, "Difference": bbva_d},
             {"Provider": "BBVA", "Type of Account": "Notice account", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 95 Day Notice", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
-            {"Provider": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 30 Day Notice", "Internal Holdings (Led Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
+            {"Provider": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA 30 Day Notice", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "Clydesdale Bank PLC", "Type of Account": "Saveable Cash ISA Instant access", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "JP Morgan", "Type of Account": "JP Morgan Client Money account (76919)", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "TOTAL", "Type of Account": "", "Internal Holdings (Ledger)": 2390477301.00, "External Holdings Statement": 2390477301.00, "Difference": 0.0}
         ]
-        st.data_editor(pd.DataFrame(main_holdings_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_main_ledger")
+        st.data_editor(main_holdings_data, column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_main_ledger")
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="table-header-container"><div class="table-title">🔍 Secondary Current Accounts Sub-Ledger Validation</div></div>', unsafe_allow_html=True)
@@ -761,7 +761,7 @@ try:
             {"Provider": "Citibank", "Type of Account": "Easy Access", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0},
             {"Provider": "TOTAL", "Type of Account": "", "Internal Holdings (Ledger)": 0.0, "External Holdings Statement": 0.0, "Difference": 0.0}
         ]
-        st.data_editor(pd.DataFrame(sub_ledger_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_sub_ledger")
+        st.data_editor(sub_ledger_data, column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_sub_ledger")
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="table-header-container"><div class="table-title">🚫 Dynamic FCA External Statement Discrepancies & Breaks Log</div></div>', unsafe_allow_html=True)
@@ -773,15 +773,15 @@ try:
             {"Breaks": "Other remaining difference", "Investigation of differences": "", "Summary of key transactions": "", "Actions Taken": "", "Difference": 0.0},
             {"Breaks": "Total", "Investigation of differences": "", "Summary of key transactions": "", "Actions Taken": "", "Difference": 0.0}
         ]
-        st.data_editor(pd.DataFrame(breaks_log_data), column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
+        st.data_editor(breaks_log_data, column_config=currency_config, use_container_width=True, hide_index=True, key="tab6_breaks_log")
 
-    # ==========================================
-    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (FINALLY 100% FIXED COLUMN TO COLUMN REAL MATRIX MATCH)
-    # ==========================================
+    # =========================================================================================
+    # 👑 🔥 TAB 7: CISA EXTERNAL WORKINGS (100% EXCEL LIVE FIXED ROW NODE INDEX MATRIX)
+    # =========================================================================================
     elif selected_tab == "7. CISA External Workings":
         df_tab7 = pd.read_excel(EXCEL_FILE, sheet_name="7. CISA External Workings", header=None)
         
-        # Top Summary Panel
+        # 📊 Top Summary Panels
         combined_plum_ledger = safe_float(df_tab7.iloc[23, 13])
         
         st.markdown("### 🏛️ CISA External Cash Workings & Multi-Banking Ledgers")
@@ -795,6 +795,7 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
+        # 🔄 Πίνακας με Dynamic Rows με σκανάρισμα των απόλυτων δεικτών και διορθωμένο merged offset
         st.markdown('<div class="table-header-container"><div class="table-title">🔄 Dynamic Statement Verification & Adjusted Banking Ledgers (2 Dates Per Bank Node)</div></div>', unsafe_allow_html=True)
         
         bank_rows_mapping = [
@@ -822,7 +823,7 @@ try:
             cols_order = ["Bank Entity Node", "D Date", "Plum Ledger Balance", "Bank Statement Balance", "Variance Break", "Adjusted Ledger Target", "Adjusted Bank Statement", "Net Variance Residual", "Commentary"]
             full_live_recon_df = full_live_recon_df[cols_order]
             
-        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v100")
+        st.data_editor(full_live_recon_df, column_config=currency_config, use_container_width=True, hide_index=True, key="tab7_excel_live_matrix_v7")
 
         # 🔍 3. FCA CASS Audit Trail Breaks Engine
         st.markdown("<br>### 🔍 Categorized System Breaks & Audit Logs Expanse")
