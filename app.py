@@ -541,6 +541,7 @@ try:
         col_bar_left, col_bar_right = st.columns(2)
         with col_bar_left:
             st.markdown("<p style='font-size:13px; font-weight:700; color:#fff; margin-bottom:15px;'>Cash ISA Aging Distribution</p>", unsafe_allow_html=True)
+            st.markdown(f'<div class="aging-bar-wrapper"><div class="aging-bar-label"><span>🟢 0-2 Days (Low Risk)</span><span>£ {cisa_b["0-2"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["0-2"] / max(1.0, cisa_unalloc_tot)))
             st.markdown(f'<div class="aging-bar-wrapper" style="margin-top:10px;"><div class="aging-bar-label"><span>🟡 3-5 Days (Medium Priority)</span><span>£ {cisa_b["3-5"]:,.2f}</span></div></div>', unsafe_allow_html=True)
             st.progress(min(1.0, cisa_b["3-5"] / max(1.0, cisa_unalloc_tot)))
