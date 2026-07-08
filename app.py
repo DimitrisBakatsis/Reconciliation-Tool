@@ -1156,7 +1156,7 @@ try:
         """, unsafe_allow_html=True)
 
 # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (BULLETPROOF DYNAMIC ROW ENGINE)
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (DYNAMIC ANCHOR ENGINE - SAME AS MASTER TAB 5)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
