@@ -1156,7 +1156,7 @@ try:
         """, unsafe_allow_html=True)
 
 # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (100% DYNAMIC ROW & COLUMN SPREAD ENGINE)
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (BULLETPROOF DYNAMIC ROW ENGINE)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
@@ -1187,7 +1187,8 @@ try:
         
         for r in range(df_tab10.shape[0]):
             for c in range(df_tab10.shape[1]):
-                if "d date" in str(df_tab10.iloc[r, c]).lower() or "date" in str(df_tab10.iloc[r, c]).lower():
+                cell_txt = str(df_tab10.iloc[r, c]).lower().strip()
+                if "d date" in cell_txt or cell_txt == "date":
                     anchor_row = r
                     date_col_idx = c
                     break
@@ -1196,23 +1197,26 @@ try:
 
         parsed_tab10_records = []
         if anchor_row is not None and date_col_idx is not None:
-            # Ξεκινάμε να διαβάζουμε τις δυναμικές σειρές αμέσως κάτω από τον τίτλο "D Date"
             for r in range(anchor_row + 1, df_tab10.shape[0]):
                 date_cell = df_tab10.iloc[r, date_col_idx]
                 
-                # Σταματάμε αν βρούμε "Total", "Adjusted" ή αν αδειάσει τελείως η σειρά
+                # Σταματάμε αν βρούμε "Total", "Adjusted" ή αν αδειάσει τελείως το κελί της ημερομηνίας
                 if pd.isna(date_cell) or any(keyword in str(date_cell).lower() for keyword in ["total", "adjusted", "sum", "reconciliation"]):
                     break
                     
-                clean_date = date_cell.strftime('%d/%m/%Y') if hasattr(date_cell, 'strftime') else str(date_cell).split()[0]
+                if hasattr(date_cell, 'strftime'):
+                    clean_date = date_cell.strftime('%d/%m/%Y')
+                else:
+                    clean_date = str(date_cell).split()[0]
                 
+                # Ingestion με βάση τις στήλες σου (D=Date, E=Product, F=Combined, G=Plum, I=Commentary, J=Action)
                 parsed_tab10_records.append({
                     "D Date": clean_date,
                     "Product": str(df_tab10.iloc[r, date_col_idx + 1]).strip() if pd.notna(df_tab10.iloc[r, date_col_idx + 1]) else "LISA",
-                    "Combined User Bal": safe_float(df_tab10.iloc[r, date_col_idx + 2]), # Στήλη F
-                    "Plum Ledger Bal": safe_float(df_tab10.iloc[r, date_col_idx + 3]),   # Στήλη G
-                    "Commentary / Description": str(df_tab10.iloc[r, date_col_idx + 5]).strip() if pd.notna(df_tab10.iloc[r, date_col_idx + 5]) else "N/A", # Στήλη I
-                    "Action Taken": str(df_tab10.iloc[r, date_col_idx + 6]).strip() if (date_col_idx + 6 < df_tab10.shape[1] and pd.notna(df_tab10.iloc[r, date_col_idx + 6])) else "N/A"
+                    "Combined User Bal": safe_float(df_tab10.iloc[r, date_col_idx + 2]), # Στήλη F (Index + 2)
+                    "Plum Ledger Bal": safe_float(df_tab10.iloc[r, date_col_idx + 3]),   # Στήλη G (Index + 3)
+                    "Commentary / Description": str(df_tab10.iloc[r, date_col_idx + 5]).strip() if pd.notna(df_tab10.iloc[r, date_col_idx + 5]) else "N/A", # Στήλη I (Index + 5)
+                    "Action Taken": str(df_tab10.iloc[r, date_col_idx + 6]).strip() if (date_col_idx + 6 < df_tab10.shape[1] and pd.notna(df_tab10.iloc[r, date_col_idx + 6])) else "N/A" # Στήλη J (Index + 6)
                 })
 
         df_tab10_grid = pd.DataFrame(parsed_tab10_records) if parsed_tab10_records else pd.DataFrame()
@@ -1221,9 +1225,9 @@ try:
             st.data_editor(df_tab10_grid, column_config={
                 "Combined User Bal": st.column_config.NumberColumn("Combined User Bal", format="£%,.2f"),
                 "Plum Ledger Bal": st.column_config.NumberColumn("Plum Ledger Bal", format="£%,.2f")
-            }, use_container_width=True, hide_index=True, key="tab10_dynamic_lisa_matrix")
+            }, use_container_width=True, hide_index=True, key="tab10_dynamic_lisa_matrix_v3")
         else:
-            st.info("No active lines found inside D23:M42 coordinate nodes. Check data sync.")
+            st.info("No active lines found inside dynamic coordinate nodes. Check data alignment.")
 
         # 🛠️ 3. Adjusted Totals & Sign-off Thresholds (Dynamic Lookup)
         adj_cub_lisa = parse_live_value(df_tab10, "Adjusted Combined User Balance", 1, 218409519.50)
