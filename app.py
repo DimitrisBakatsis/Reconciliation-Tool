@@ -1032,7 +1032,7 @@ try:
         df_dash1 = df_master_t8[(df_master_t8["Order Category"] == "aggregate") & (df_master_t8["Direction"] == "credit")] if not df_master_t8.empty else pd.DataFrame()
         dash1_sum = df_dash1["Citi Cash Amount"].sum() if not df_dash1.empty else 2868893.24
         
-        with st.expander(f"🟢 DASHBOARD A: TOTAL AGGREGATE CREDITS", expanded=True):
+        with st.expander(f"🟢 TOTAL AGGREGATE CREDITS", expanded=True):
             st.markdown(f"""
                 <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
                     <div class="table-title" style="color: #10b981;">Plum Automated Bulk User Deposits (Citi Statement Match)</div>
@@ -1050,7 +1050,7 @@ try:
         df_dash2 = df_master_t8[(df_master_t8["Order Category"] == "aggregate") & (df_master_t8["Direction"] == "debit")] if not df_master_t8.empty else pd.DataFrame()
         dash2_sum = df_dash2["Citi Cash Amount"].sum() if not df_dash2.empty else 2220411.94
         
-        with st.expander(f"🔴 DASHBOARD B: TOTAL AGGREGATE DEBITS", expanded=True):
+        with st.expander(f"🔴 TOTAL AGGREGATE DEBITS", expanded=True):
             st.markdown(f"""
                 <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
                     <div class="table-title" style="color: #ef4444;">Plum Automated Bulk User Withdrawals (Citi Statement Match)</div>
@@ -1068,7 +1068,7 @@ try:
         df_dash3 = df_master_t8[(df_master_t8["Order Category"] == "internal_transaction") & (df_master_t8["Direction"] == "credit")] if not df_master_t8.empty else pd.DataFrame()
         dash3_sum = df_dash3["Plum Invoiced Amount"].sum() if not df_dash3.empty else 2458082.97
         
-        with st.expander(f"🔵 DASHBOARD C: INTERNAL TRANSACTION CREDITS", expanded=False):
+        with st.expander(f"🔵 INTERNAL TRANSACTION CREDITS", expanded=False):
             st.markdown(f"""
                 <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
                     <div class="table-title" style="color: #3b82f6;">Corporate Inter-Account Safe Funding & Asset Adjustments</div>
@@ -1086,7 +1086,7 @@ try:
         df_dash4 = df_master_t8[(df_master_t8["Order Category"] == "internal_transaction") & (df_master_t8["Direction"] == "debit")] if not df_master_t8.empty else pd.DataFrame()
         dash4_sum = df_dash4["Plum Invoiced Amount"].sum() if not df_dash4.empty else 2120803.93
         
-        with st.expander(f"🟠 DASHBOARD D: INTERNAL TRANSACTION DEBITS", expanded=False):
+        with st.expander(f"🟠 INTERNAL TRANSACTION DEBITS", expanded=False):
             st.markdown(f"""
                 <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
                     <div class="table-title" style="color: #f59e0b;">Corporate Inter-Account Deficit Settlement Transfers</div>
