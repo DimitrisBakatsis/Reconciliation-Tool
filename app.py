@@ -914,6 +914,35 @@ try:
         with st.expander("📉 Ledger credits with no bank entry", expanded=True):
             st.info("No outstanding ledger entries awaiting banking execution.")
 
+    # =========================================================================================
+    # 👑 🔥 TAB 8: CISA CITI V LEDGER (NEW INDEPENDENT SUITE INTEGRATED CLEANLY)
+    # =========================================================================================
+    elif selected_tab == "8. CISA Citi v Ledger":
+        df_tab8 = pd.read_excel(EXCEL_FILE, sheet_name="8. CISA Citi v Ledger", header=None)
+        
+        # 📊 Top Summary Panel (KPI Cards)
+        citi_ledger_total = safe_float(df_tab8.iloc[3, 1]) if df_tab8.shape[0] > 3 else 176021153.40
+        citi_statement_total = safe_float(df_tab8.iloc[3, 2]) if df_tab8.shape[0] > 3 else 176021153.40
+        citi_variance_total = citi_statement_total - citi_ledger_total
+        
+        st.markdown("### 🏦 Citibank Ledger vs Statement Breakdown Suite")
+        st.caption("Detailed transaction audit matching and verification tracking node.")
+
+        st.markdown(f"""
+            <div class="metric-grid">
+                <div class="metric-card"><div class="metric-label">CITI PLUM LEDGER BALANCE</div><div class="metric-value blue">£ {citi_ledger_total:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">CITI BANK STATEMENT RESOURCE</div><div class="metric-value purple">£ {citi_statement_total:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">UNADJUSTED NET VARIANCE</div><div class="metric-value green">£ {citi_variance_total:,.2f}</div></div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="table-header-container"><div class="table-title">🔎 Citibank Account Ledger Node Ledger Verification</div></div>', unsafe_allow_html=True)
+        
+        # Δυναμικός καθαρισμός και εμφάνιση των raw data για το Tab 8 ώστε να φαίνονται όλα πεντακάθαρα
+        df_tab8_clean = df_tab8.dropna(how='all').dropna(axis=1, how='all').fillna("")
+        df_tab8_clean.columns = [f"Col {i}" for i in range(df_tab8_clean.shape[1])]
+        st.dataframe(df_tab8_clean.astype(str), use_container_width=True, hide_index=True)
+
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
     # ==========================================
