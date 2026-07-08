@@ -1156,16 +1156,15 @@ try:
         """, unsafe_allow_html=True)
 
 # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (STRICT ABSOLUTE COLUMN MAPPING HUB)
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (DYNAMIC COMMENTARY & ACTION EXTRACTION ENGINE)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
         
-        # 📊 1. Top Core KPIs - Live Safe Parsing from Row 10 (Excel Node View)
+        # 📊 1. Top Core KPIs - Live Safe Parsing from Row 10
         cub_raw_lisa  = safe_float(df_tab10.iloc[9, 5]) if df_tab10.shape[0] > 9 and df_tab10.shape[1] > 5 else 218409519.50
         plum_raw_lisa = safe_float(df_tab10.iloc[9, 6]) if df_tab10.shape[0] > 9 and df_tab10.shape[1] > 6 else 218409519.50
         
-        # Fallback αν οι επάνω τίτλοι μετακινήθηκαν
         if cub_raw_lisa == 0.0: cub_raw_lisa = 218409519.50
         if plum_raw_lisa == 0.0: plum_raw_lisa = 218409519.50
         diff_raw_lisa = abs(cub_raw_lisa - plum_raw_lisa)
@@ -1181,31 +1180,41 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🛠️ 2. Strict Absolute Grid Ingestion Loop (D23:M42)
+        # 🛠️ 2. Dynamic Text Scanner Loop (D23:M42)
         parsed_tab10_records = []
         
-        # Ξεκινάμε από τη γραμμή 23 (Index 22) και σκανάρουμε προς τα κάτω
         for r in range(22, df_tab10.shape[0]):
             date_cell = df_tab10.iloc[r, 3] # 📅 Στήλη D (Index 3)
             
-            # Διακόπτουμε τον βρόχο αν συναντήσουμε κενό, Total ή Adjusted σύνολα
             if pd.isna(date_cell) or any(k in str(date_cell).lower() for k in ["total", "adjusted", "sum", "reconciliation"]):
                 break
                 
             clean_date = date_cell.strftime('%d/%m/%Y') if hasattr(date_cell, 'strftime') else str(date_cell).split()[0]
             
-            # Απόλυτη χαρτογράφηση βάσει των στηλών D, E, F, G, I, J του Excel σου
             prod_val = str(df_tab10.iloc[r, 4]).strip() if pd.notna(df_tab10.iloc[r, 4]) else "LISA"
-            if len(prod_val) > 10:  # Αν τραβήξει UUID hash κατά λάθος, το κάνουμε force σε "LISA"
+            if len(prod_val) > 10: 
                 prod_val = "LISA"
                 
+            # Dynamic Text Extraction Suite: Μαζεύουμε όλα τα έγκυρα strings μετά τα ποσά (από το Index 7 έως το τέλος της γραμμής)
+            text_cells = []
+            for col_idx in range(7, df_tab10.shape[1]):
+                val = df_tab10.iloc[r, col_idx]
+                if pd.notna(val) and len(str(val).strip()) > 2 and str(val).strip() != "0" and str(val).strip() != "0.0":
+                    # Φιλτράρουμε ώστε να μην ξαναπιάσουμε αριθμητικά υπόλοιπα
+                    if any(c.isalpha() for c in str(val)):
+                        text_cells.append(str(val).strip())
+            
+            # Αντιστοίχιση των κειμένων που βρέθηκαν δυναμικά
+            commentary_val = text_cells[0] if len(text_cells) > 0 else "N/A"
+            action_val = text_cells[1] if len(text_cells) > 1 else "N/A"
+            
             parsed_tab10_records.append({
                 "D Date": clean_date,
-                "Product": prod_val,                                         # Στήλη E (Index 4)
-                "Combined User Bal": safe_float(df_tab10.iloc[r, 5]),        # Στήλη F (Index 5)
-                "Plum Ledger Bal": safe_float(df_tab10.iloc[r, 6]),          # Στήλη G (Index 6)
-                "Commentary / Description": str(df_tab10.iloc[r, 8]).strip() if pd.notna(df_tab10.iloc[r, 8]) else "N/A", # Στήλη I (Index 8)
-                "Action Taken": str(df_tab10.iloc[r, 9]).strip() if (df_tab10.shape[1] > 9 and pd.notna(df_tab10.iloc[r, 9])) else "N/A" # Στήλη J (Index 9)
+                "Product": prod_val,
+                "Combined User Bal": safe_float(df_tab10.iloc[r, 5]),
+                "Plum Ledger Bal": safe_float(df_tab10.iloc[r, 6]),
+                "Commentary / Description": commentary_val,
+                "Action Taken": action_val
             })
 
         df_tab10_grid = pd.DataFrame(parsed_tab10_records) if parsed_tab10_records else pd.DataFrame()
@@ -1214,11 +1223,11 @@ try:
             st.data_editor(df_tab10_grid, column_config={
                 "Combined User Bal": st.column_config.NumberColumn("Combined User Bal", format="£%,.2f"),
                 "Plum Ledger Bal": st.column_config.NumberColumn("Plum Ledger Bal", format="£%,.2f")
-            }, use_container_width=True, hide_index=True, key="tab10_strict_absolute_lisa_matrix")
+            }, use_container_width=True, hide_index=True, key="tab10_dynamic_lisa_matrix_v4")
         else:
             st.info("No active lines found inside strict D23:M42 coordinate matrix blocks.")
 
-        # 🛠️ 3. Adjusted Totals Panel (Safe Dynamic Positional Scan)
+        # 🛠️ 3. Adjusted Totals Panel
         adj_cub_lisa = 0.0
         adj_plum_lisa = 0.0
         sum_breaks_lisa = 0.0
@@ -1241,7 +1250,7 @@ try:
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Adjusted Reconciliation Totals</div></div>
                     <div class="recon-row"><span>Adjusted Combined User Balance</span><strong>£ {adj_cub_lisa:,.2f}</strong></div>
-                    <div class="recon-row"><span>Adjusted Plum Ledger Balance</span><strong>£ {adj_plum_lisa:,.2f}</strong></div>
+                    <div class="recon-row"><span>Adjusted Plum Ledger Balance</span>export <strong>£ {adj_plum_lisa:,.2f}</strong></div>
                     <div class="recon-row total"><span>Adjusted Diff Rec Pool</span><strong>£ {adj_diff_lisa:,.2f}</strong></div>
                 </div>
             """, unsafe_allow_html=True)
