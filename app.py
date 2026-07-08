@@ -914,34 +914,137 @@ try:
         with st.expander("📉 Ledger credits with no bank entry", expanded=True):
             st.info("No outstanding ledger entries awaiting banking execution.")
 
-    # =========================================================================================
-    # 👑 🔥 TAB 8: CISA CITI V LEDGER (NEW INDEPENDENT SUITE INTEGRATED CLEANLY)
+# =========================================================================================
+    # 🏛️ 📊 TAB 8: CISA CITI V LEDGER (PREMIUM 4-CATEGORY AUDIT MATRIX SPLIT)
     # =========================================================================================
     elif selected_tab == "8. CISA Citi v Ledger":
         df_tab8 = pd.read_excel(EXCEL_FILE, sheet_name="8. CISA Citi v Ledger", header=None)
         
-        # 📊 Top Summary Panel (KPI Cards)
-        citi_ledger_total = safe_float(df_tab8.iloc[3, 1]) if df_tab8.shape[0] > 3 else 176021153.40
-        citi_statement_total = safe_float(df_tab8.iloc[3, 2]) if df_tab8.shape[0] > 3 else 176021153.40
-        citi_variance_total = citi_statement_total - citi_ledger_total
+        # 📊 1. Top Enterprise Control KPIs (Live Safe Parsing)
+        citi_ledger_total    = safe_float(df_tab8.iloc[20, 11]) if df_tab8.shape[0] > 20 else 2868893.24
+        citi_statement_total = safe_float(df_tab8.iloc[21, 11]) if df_tab8.shape[0] > 21 else 2220411.94
+        citi_net_variance    = citi_ledger_total - citi_statement_total
         
-        st.markdown("### 🏦 Citibank Ledger vs Statement Breakdown Suite")
-        st.caption("Detailed transaction audit matching and verification tracking node.")
+        st.markdown("### 🏦 Citibank Account Ledger Node Verification Suite")
+        st.caption("FASS CASS 7.15 Transactional Reconciliation Framework mapping Plum Ledger vs Citi Statements Node.")
 
         st.markdown(f"""
             <div class="metric-grid">
-                <div class="metric-card"><div class="metric-label">CITI PLUM LEDGER BALANCE</div><div class="metric-value blue">£ {citi_ledger_total:,.2f}</div></div>
-                <div class="metric-card"><div class="metric-label">CITI BANK STATEMENT RESOURCE</div><div class="metric-value purple">£ {citi_statement_total:,.2f}</div></div>
-                <div class="metric-card"><div class="metric-label">UNADJUSTED NET VARIANCE</div><div class="metric-value green">£ {citi_variance_total:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">TOTAL LEDGER BALANCES pool</div><div class="metric-value blue">£ {citi_ledger_total:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">TOTAL STATEMENT RESOURCE</div><div class="metric-value purple">£ {citi_statement_total:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">NET RECON VARIANCE LIMIT</div><div class="metric-value green">£ {citi_net_variance:,.2f}</div></div>
             </div>
         """, unsafe_allow_html=True)
 
-        st.markdown('<div class="table-header-container"><div class="table-title">🔎 Citibank Account Ledger Node Ledger Verification</div></div>', unsafe_allow_html=True)
+        # 🛠️ 2. Dynamic Data Extraction & Cleaning Engine
+        raw_rows = []
+        for r in range(5, df_tab8.shape[0]):
+            status = str(df_tab8.iloc[r, 0]).strip() if pd.notna(df_tab8.iloc[r, 0]) else ""
+            if not status or "investigation" in status.lower() or "resolved" in status.lower() or status.isdigit():
+                # Σκανάρισμα στηλών με βάση τη δομή Plum Transaction vs Citi Transaction
+                ref_plum  = str(df_tab8.iloc[r, 4]).strip() if pd.notna(df_tab8.iloc[r, 4]) else "N/A"
+                ref_citi  = str(df_tab8.iloc[r, 3]).strip() if pd.notna(df_tab8.iloc[r, 3]) else "N/A"
+                tx_type   = str(df_tab8.iloc[r, 6]).strip().lower() if pd.notna(df_tab8.iloc[r, 6]) else ""
+                order_type= str(df_tab8.iloc[r, 5]).strip().lower() if pd.notna(df_tab8.iloc[r, 5]) else ""
+                amt_plum  = safe_float(df_tab8.iloc[r, 7])
+                amt_citi  = safe_float(df_tab8.iloc[r, 10])
+                desc_citi = str(df_tab8.iloc[r, 12]).strip() if df_tab8.shape[1] > 12 and pd.notna(df_tab8.iloc[r, 12]) else "N/A"
+                
+                if amt_plum > 0 or amt_citi > 0:
+                    raw_rows.append({
+                        "Status": status if status else "RESOLVED",
+                        "Plum Reference": ref_plum,
+                        "Citi Reference Node": ref_citi,
+                        "Type": tx_type,
+                        "Order Category": order_type,
+                        "Plum Amount": amt_plum,
+                        "Citi Amount": amt_citi,
+                        "Description": desc_citi
+                    })
         
-        # Δυναμικός καθαρισμός και εμφάνιση των raw data για το Tab 8 ώστε να φαίνονται όλα πεντακάθαρα
-        df_tab8_clean = df_tab8.dropna(how='all').dropna(axis=1, how='all').fillna("")
-        df_tab8_clean.columns = [f"Col {i}" for i in range(df_tab8_clean.shape[1])]
-        st.dataframe(df_tab8_clean.astype(str), use_container_width=True, hide_index=True)
+        df_clean_master = pd.DataFrame(raw_rows)
+        
+        # Configurations για τα επιμέρους Data Editors
+        grid_config = {
+            "Status": st.column_config.TextColumn("Audit Status"),
+            "Plum Reference": st.column_config.TextColumn("Plum Order Link"),
+            "Citi Reference Node": st.column_config.TextColumn("Citi Reference ID"),
+            "Plum Amount": st.column_config.NumberColumn("Plum Ledger Bal", format="£%,.2f"),
+            "Citi Amount": st.column_config.NumberColumn("Citi Statement Bal", format="£%,.2f"),
+            "Description": st.column_config.TextColumn("Citibank Statement Description")
+        }
+
+        # =====================================================================================
+        # CATEGORY 1: AGGREGATE CREDITS MATRIX
+        # =====================================================================================
+        df_cat1 = df_clean_master[(df_clean_master["Type"] == "credit") & (df_clean_master["Order Category"] == "aggregate")] if not df_clean_master.empty else pd.DataFrame()
+        sum_cat1 = df_cat1["Citi Amount"].sum() if not df_cat1.empty else 0.0
+        
+        with st.expander(f"💳 CATEGORY A: AGGREGATE CREDITS MATRIX ({len(df_cat1)} Items logged)", expanded=True):
+            st.markdown(f"""
+                <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
+                    <div class="table-title" style="color: #10b981;">Plum Automated Bulk User Deposits (Total Pool)</div>
+                    <div class="net-change-badge green">Sum Value: £ {sum_cat1:,.2f}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            if not df_cat1.empty:
+                st.data_editor(df_cat1[["Status", "Plum Reference", "Citi Reference Node", "Plum Amount", "Citi Amount", "Description"]], column_config=grid_config, use_container_width=True, hide_index=True, key="t8_cat1_editor")
+            else:
+                st.info("No active open aggregate credits tracked in today's ledger cycle.")
+
+        # =====================================================================================
+        # CATEGORY 2: AGGREGATE DEBITS MATRIX
+        # =====================================================================================
+        df_cat2 = df_clean_master[(df_clean_master["Type"] == "debit") & (df_clean_master["Order Category"] == "aggregate")] if not df_clean_master.empty else pd.DataFrame()
+        sum_cat2 = df_cat2["Citi Amount"].sum() if not df_cat2.empty else 0.0
+        
+        with st.expander(f"💸 CATEGORY B: AGGREGATE DEBITS MATRIX ({len(df_cat2)} Items logged)", expanded=True):
+            st.markdown(f"""
+                <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
+                    <div class="table-title" style="color: #ef4444;">Plum Automated Bulk User Withdrawals (Total Pool)</div>
+                    <div class="net-change-badge red">Sum Value: £ {sum_cat2:,.2f}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            if not df_cat2.empty:
+                st.data_editor(df_cat2[["Status", "Plum Reference", "Citi Reference Node", "Plum Amount", "Citi Amount", "Description"]], column_config=grid_config, use_container_width=True, hide_index=True, key="t8_cat2_editor")
+            else:
+                st.info("No active open aggregate debits tracked in today's ledger cycle.")
+
+        # =====================================================================================
+        # CATEGORY 3: INTERNAL TRANSACTION CREDITS
+        # =====================================================================================
+        df_cat3 = df_clean_master[(df_clean_master["Type"] == "credit") & (df_clean_master["Order Category"] == "internal_transaction")] if not df_clean_master.empty else pd.DataFrame()
+        sum_cat3 = df_cat3["Plum Amount"].sum() if not df_cat3.empty else 0.0
+        
+        with st.expander(f"🔄 CATEGORY C: INTERNAL TRANSACTION CREDITS ({len(df_cat3)} Adjustments logged)", expanded=False):
+            st.markdown(f"""
+                <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
+                    <div class="table-title" style="color: #3b82f6;">Corporate Inter-Account Safe Funding & Adjustments</div>
+                    <div class="net-change-badge blue">Sum Value: £ {sum_cat3:,.2f}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            if not df_cat3.empty:
+                st.data_editor(df_cat3[["Status", "Plum Reference", "Citi Reference Node", "Plum Amount", "Citi Amount", "Description"]], column_config=grid_config, use_container_width=True, hide_index=True, key="t8_cat3_editor")
+            else:
+                st.info("No corporate interest or residual treasury internal asset movements flagged.")
+
+        # =====================================================================================
+        # CATEGORY 4: INTERNAL TRANSACTION DEBITS
+        # =====================================================================================
+        df_cat4 = df_clean_master[(df_clean_master["Type"] == "debit") & (df_clean_master["Order Category"] == "internal_transaction")] if not df_clean_master.empty else pd.DataFrame()
+        sum_cat4 = df_cat4["Plum Amount"].sum() if not df_cat4.empty else 0.0
+        
+        with st.expander(f"🚫 CATEGORY D: INTERNAL TRANSACTION DEBITS ({len(df_cat4)} Adjustments logged)", expanded=False):
+            st.markdown(f"""
+                <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
+                    <div class="table-title" style="color: #f59e0b;">Corporate Inter-Account Deficit Settlement Transfers</div>
+                    <div class="net-change-badge orange">Sum Value: £ {sum_cat4:,.2f}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            if not df_cat4.empty:
+                st.data_editor(df_cat4[["Status", "Plum Reference", "Citi Reference Node", "Plum Amount", "Citi Amount", "Description"]], column_config=grid_config, use_container_width=True, hide_index=True, key="t8_cat4_editor")
+            else:
+                st.info("No open corporate deficit out-flows or manual ledger corrections recorded.")
 
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
