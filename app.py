@@ -1065,7 +1065,7 @@ try:
         # =====================================================================================
         # 🔵 DASHBOARD 3: INTERNAL TRANSACTION CREDITS
         # =====================================================================================
-df_dash3 = df_master_t8[(df_master_t8["Order Category"] == "internal_transaction") & (df_master_t8["Direction"] == "credit")] if not df_master_t8.empty else pd.DataFrame()
+        df_dash3 = df_master_t8[(df_master_t8["Order Category"] == "internal_transaction") & (df_master_t8["Direction"] == "credit")] if not df_master_t8.empty else pd.DataFrame()
         dash3_sum = df_dash3["Plum Invoiced Amount"].sum() if not df_dash3.empty else 2458082.97
         
         with st.expander(f"🔵 INTERNAL TRANSACTION CREDITS", expanded=False):
