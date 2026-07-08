@@ -1086,6 +1086,74 @@ try:
                 st.data_editor(df_dash4[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash4_editor_v3")
             else:
                 st.info("No active lines matching 'internal_transaction' + 'debit' conditions found in the Excel sheet.")
+
+    # ==========================================
+    # 🏛️ TAB 9: LISA - CASS INTERNAL REC
+    # ==========================================
+    elif selected_tab == "9. LISA - CASS Internal Rec":
+        df_tab9 = pd.read_excel(EXCEL_FILE, sheet_name="9. LISA - CASS Internal Rec", header=None)
+        row_shortfall_idx_lisa = locate_row_index(df_tab9, "Daily Surplus or Shortfall")
+        shortfall_calculated_lisa  = parse_live_value(df_tab9, "Daily Surplus or Shortfall", 1, -4393.67)
+        conclusion_excel_text_lisa = parse_dynamic_conclusion(df_tab9, row_shortfall_idx_lisa, default="Conclusion data not found.")
+        
+        combined_user_balance_lisa = parse_live_value(df_tab9, "Combined User Balance", 1, 2387522999.00)
+        less_unallocated_lisa      = parse_live_value(df_tab9, "Less Unallocated", 1, -294085.70)
+        transfers_isa_lisa         = parse_live_value(df_tab9, "Transfers in from ISA providers", 1, 2958695.42)
+        individual_client_bal_lisa = parse_live_value(df_tab9, "Individual Client Balances", 1, 2390775780.00)
+        temp_tx_funding_lisa       = parse_live_value(df_tab9, "Temporary Transaction Funding", 1, -81188.22)
+        subtotal_pre_interest_lisa = parse_live_value(df_tab9, "Sub-Total (pre-Interest)", 1, 2390481694.00)
+        
+        interest_due_raw_lisa = df_tab9.iloc[34, 4] if df_tab9.shape[0] > 34 and df_tab9.shape[1] > 4 else 0.0
+        interest_due_lisa = safe_float(interest_due_raw_lisa)
+        final_client_money_req_lisa = subtotal_pre_interest_lisa + interest_due_lisa
+
+        st.markdown("### 📊 Internal Client Money Reconciliation Suite (v4.1) - Lifetime ISA")
+        st.markdown(f"""
+            <div class="reason-box">
+                <div class="reason-title" style="color: #ef4444; font-size: 15px;">⚠️ Active Regulatory Target Status</div>
+                <div class="reason-section" style="font-size: 14px; white-space: pre-line;">
+                    <strong>Calculated Variance Shortfall:</strong> <span style="color:#ef4444; font-weight:700;">£ {shortfall_calculated_lisa:,.2f}</span><br>
+                    <strong>Audit Assessment:</strong> {conclusion_excel_text_lisa}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        row1_lisa = extract_break_row_data(df_tab9, "User Credits/Surplus not applied to ledger")
+        row2_lisa = extract_break_row_data(df_tab9, "User Debits/Shortfall not applied to ledger")
+        row3_lisa = extract_break_row_data(df_tab9, "Bulk Ledger Credits/Surplus not applied to users")
+        row4_lisa = extract_break_row_data(df_tab9, "Bulk Ledger Debits/Shortfall not applied to users")
+        premium_breaks_df_lisa = pd.DataFrame([row1_lisa, row2_lisa, row3_lisa, row4_lisa])
+        st.data_editor(premium_breaks_df_lisa, column_config=currency_config, use_container_width=True, hide_index=True, key="premium_breaks_table_lisa")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_calc_left_lisa, col_calc_right_lisa = st.columns(2)
+        with col_calc_left_lisa:
+            st.markdown(f"""
+                <div class="workspace-card">
+                    <div class="workspace-header"><div class="workspace-title">Individual Client Balances Breakdown</div></div>
+                    <div class="recon-row"><span>Combined User Balance</span><strong>£ {combined_user_balance_lisa:,.2f}</strong></div>
+                    <div class="recon-row"><span>Less: Unallocated Funds Pool</span><strong style="color:#ef4444;">£ {less_unallocated_lisa:,.2f}</strong></div>
+                    <div class="recon-row"><span>Add: Pending Transfers In</span><strong style="color:#10b981;">+£ {transfers_isa_lisa:,.2f}</strong></div>
+                    <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px;"><span>Individual Client Balances</span><strong style="color:#3b82f6;">£ {individual_client_bal_lisa:,.2f}</strong></div>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_calc_right_lisa:
+            st.markdown(f"""
+                <div class="workspace-card">
+                    <div class="workspace-header"><div class="workspace-title">Prudent Funding & Adjustments</div></div>
+                    <div class="recon-row"><span>Unallocated Balances Pool</span><strong>£ {less_unallocated_lisa:,.2f}</strong></div>
+                    <div class="recon-row"><span>Temporary Transaction Funding</span><strong style="color:#ef4444;">£ {temp_tx_funding_lisa:,.2f}</strong></div>
+                    <div class="recon-row total" style="border-top:1px solid #1f2937; padding-top:15px; color:#ef4444;"><span>Prudent Funding Subtotal</span><strong>£ {temp_tx_funding_lisa:,.2f}</strong></div>
+                </div>
+            """, unsafe_allow_html=True)
+        st.markdown(f"""
+            <div class="workspace-card" style="margin-top:20px;">
+                <div class="recon-row" style="font-size:15px;"><span>Sub-Total Requirement (pre-Interest)</span><strong>£ {subtotal_pre_interest_lisa:,.2f}</strong></div>
+                <div class="recon-row" style="font-size:14px; color:#9ca3af;"><span>User Base Calculated Interest Accrual (Cell E35)</span><strong>£ {interest_due_lisa:,.2f}</strong></div>
+                <div class="recon-row total" style="font-size:18px; color:#10b981; border-top:2px solid #1f2937; padding-top:15px;">
+                    <span>🏛️ Final Client Money Requirement Target</span><strong>£ {final_client_money_req_lisa:,.2f}</strong>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
     # ==========================================
