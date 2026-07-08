@@ -1156,7 +1156,7 @@ try:
         """, unsafe_allow_html=True)
 
 # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (DYNAMIC COMMENTARY & ACTION EXTRACTION ENGINE)
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (DYNAMIC COMMENTARY & LIVE NOTE SCANNERS)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
@@ -1182,9 +1182,11 @@ try:
 
         # 🛠️ 2. Dynamic Text Scanner Loop (D23:M42)
         parsed_tab10_records = []
+        last_processed_row = 22
         
         for r in range(22, df_tab10.shape[0]):
             date_cell = df_tab10.iloc[r, 3] # 📅 Στήλη D (Index 3)
+            last_processed_row = r
             
             if pd.isna(date_cell) or any(k in str(date_cell).lower() for k in ["total", "adjusted", "sum", "reconciliation"]):
                 break
@@ -1195,16 +1197,13 @@ try:
             if len(prod_val) > 10: 
                 prod_val = "LISA"
                 
-            # Dynamic Text Extraction Suite: Μαζεύουμε όλα τα έγκυρα strings μετά τα ποσά (από το Index 7 έως το τέλος της γραμμής)
             text_cells = []
             for col_idx in range(7, df_tab10.shape[1]):
                 val = df_tab10.iloc[r, col_idx]
                 if pd.notna(val) and len(str(val).strip()) > 2 and str(val).strip() != "0" and str(val).strip() != "0.0":
-                    # Φιλτράρουμε ώστε να μην ξαναπιάσουμε αριθμητικά υπόλοιπα
                     if any(c.isalpha() for c in str(val)):
                         text_cells.append(str(val).strip())
             
-            # Αντιστοίχιση των κειμένων που βρέθηκαν δυναμικά
             commentary_val = text_cells[0] if len(text_cells) > 0 else "N/A"
             action_val = text_cells[1] if len(text_cells) > 1 else "N/A"
             
@@ -1250,7 +1249,7 @@ try:
                 <div class="workspace-card">
                     <div class="workspace-header"><div class="workspace-title">Adjusted Reconciliation Totals</div></div>
                     <div class="recon-row"><span>Adjusted Combined User Balance</span><strong>£ {adj_cub_lisa:,.2f}</strong></div>
-                    <div class="recon-row"><span>Adjusted Plum Ledger Balance</span>export <strong>£ {adj_plum_lisa:,.2f}</strong></div>
+                    <div class="recon-row"><span>Adjusted Plum Ledger Balance</span><strong>£ {adj_plum_lisa:,.2f}</strong></div>
                     <div class="recon-row total"><span>Adjusted Diff Rec Pool</span><strong>£ {adj_diff_lisa:,.2f}</strong></div>
                 </div>
             """, unsafe_allow_html=True)
@@ -1265,6 +1264,36 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
+        # 🛠️ 4. Dynamic Lower Notes & Shortfall Ingestion Block (Από το τέλος του πίνακα και κάτω)
+        lower_shortfall_records = []
+        for r_note in range(last_processed_row, df_tab10.shape[0]):
+            note_status = str(df_tab10.iloc[r_note, 0]).strip() if pd.notna(df_tab10.iloc[r_note, 0]) else ""
+            if "resolved" in note_status.lower() or any(char.isdigit() for char in note_status):
+                note_date_cell = df_tab10.iloc[r_note, 3]
+                if pd.notna(note_date_cell):
+                    note_date = note_date_cell.strftime('%d/%m/%Y') if hasattr(note_date_cell, 'strftime') else str(note_date_cell).split()[0]
+                else:
+                    note_date = "16/06/2026"
+                
+                note_amt = safe_float(df_tab10.iloc[r_note, 6]) if safe_float(df_tab10.iloc[r_note, 6]) != 0.0 else safe_float(df_tab10.iloc[r_note, 5])
+                
+                # Αναζήτηση για περιγραφές κειμένου στη σειρά της σημείωσης
+                note_text = "Internal Movement / Residual Audit Correction"
+                for c_scan in range(7, df_tab10.shape[1]):
+                    scan_val = df_tab10.iloc[r_note, c_scan]
+                    if pd.notna(scan_val) and any(char.isalpha() for char in str(scan_val)) and len(str(scan_val).strip()) > 5:
+                        note_text = str(scan_val).strip()
+                        break
+                
+                lower_shortfall_records.append({
+                    "Date": note_date,
+                    "Errored Order ID/break details": note_text,
+                    "Admin Link": "N/A",
+                    "Action": "To be matched against corporate interest portfolio",
+                    "Jira Ticket": "N/A",
+                    "Amount": note_amt
+                })
+
         st.markdown("### 🔍 Categorized System Breaks & Audit Logs Expanse")
         with st.expander("💳 Bulk Ledger credits not applied to user balance (Live File Synced)", expanded=True):
             st.info("No active open credits matching internal ledger subset found.")
@@ -1275,8 +1304,12 @@ try:
         with st.expander("📈 User surplus not applied to bulk ledger"):
             st.info("No active customer surplus errors tracked.")
 
+        # 👑 ΔΙΟΡΘΩΘΗΚΕ: Εδώ τραβάει live τη σημείωση (Note) από το τέλος του Tab 10, όπως ακριβώς και στο Tab 5!
         with st.expander("📉 User shortfall not applied to bulk ledger", expanded=True):
-            st.info("No active customer shortfall deviations discovered.")
+            if lower_shortfall_records:
+                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_live_sync")
+            else:
+                st.info("No active customer shortfall deviations discovered.")
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
     # ==========================================
