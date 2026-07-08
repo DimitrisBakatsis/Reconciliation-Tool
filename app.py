@@ -1156,7 +1156,7 @@ try:
         """, unsafe_allow_html=True)
 
 # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (FORCED DYNAMIC NOTE EXTRACTION ENGINE)
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (STRICT POSITIONAL LOWER BREAKS SCANNERS)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
@@ -1182,11 +1182,9 @@ try:
 
         # 🛠️ 2. Dynamic Text Scanner Loop (D23:M42)
         parsed_tab10_records = []
-        last_processed_row = 22
         
         for r in range(22, df_tab10.shape[0]):
             date_cell = df_tab10.iloc[r, 3] # 📅 Στήλη D (Index 3)
-            last_processed_row = r
             
             if pd.isna(date_cell) or any(k in str(date_cell).lower() for k in ["total", "adjusted", "sum", "reconciliation"]):
                 break
@@ -1264,31 +1262,31 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-        # 🛠️ 4. Forced Notes & Shortfall Ingestion Block (Δυναμική ανίχνευση του Note χωρίς έλεγχο Status)
+        # 🛠️ 4. Forced Positional Note Extractor (Σαρώνει απευθείας τις κάτω γραμμές του Excel 42-55)
         lower_shortfall_records = []
-        for r_note in range(last_processed_row, df_tab10.shape[0]):
-            row_dump = " ".join([str(df_tab10.iloc[r_note, c]).lower() for c in range(df_tab10.shape[1]) if pd.notna(df_tab10.iloc[r_note, c])])
+        for r_note in range(42, min(55, df_tab10.shape[0])):
+            note_date_cell = df_tab10.iloc[r_note, 3] # 📅 Στήλη D
             
-            # Αν η γραμμή περιέχει το κείμενο της σημείωσης (Internal movements...)
-            if "internal movements" in row_dump or "please see" in row_dump or "evidence" in row_dump:
-                note_text = "Internal movements - Please see internal movements folder for previous day for back up and evidence"
-                
-                # Προσπάθεια εύρεσης ημερομηνίας στη στήλη D ή C
-                note_date_cell = df_tab10.iloc[r_note, 3] if pd.notna(df_tab10.iloc[r_note, 3]) else df_tab10.iloc[r_note, 2]
+            # Αν βρούμε έγκυρη ημερομηνία στις κάτω γραμμές, σημαίνει ότι υπάρχει καταγεγραμμένο break!
+            if pd.notna(note_date_cell) and any(char.isdigit() for char in str(note_date_cell)):
                 note_date = note_date_cell.strftime('%d/%m/%Y') if hasattr(note_date_cell, 'strftime') else str(note_date_cell).split()[0]
-                if "/" not in str(note_date):
-                    note_date = "07/07/2026"
                 
-                # Τραβάμε το ποσό (στήλη G ή F)
+                # Τραβάμε την περιγραφή από τη στήλη E ή I
+                note_text = "Internal movements / Shortfall Residual Interest Portfolio Correction"
+                for c_scan in range(4, df_tab10.shape[1]):
+                    scan_val = df_tab10.iloc[r_note, c_scan]
+                    if pd.notna(scan_val) and any(char.isalpha() for char in str(scan_val)) and len(str(scan_val).strip()) > 5:
+                        note_text = str(scan_val).strip()
+                        break
+                        
+                # Τραβάμε το ποσό (Στήλη F ή G)
                 note_amt = safe_float(df_tab10.iloc[r_note, 6]) if safe_float(df_tab10.iloc[r_note, 6]) != 0.0 else safe_float(df_tab10.iloc[r_note, 5])
-                if note_amt == 0.0:
-                    note_amt = 847.44  # Fallback με βάση την CISA αντίστοιχη κίνηση αν είναι merged κελί
                 
                 lower_shortfall_records.append({
                     "Date": note_date,
                     "Errored Order ID/break details": note_text,
                     "Admin Link": "N/A",
-                    "Action": "To be matched against corporate interest portfolio",
+                    "Action": "To be moved/adjusted against LISA corporate pool interest",
                     "Jira Ticket": "N/A",
                     "Amount": note_amt
                 })
@@ -1303,10 +1301,10 @@ try:
         with st.expander("📈 User surplus not applied to bulk ledger"):
             st.info("No active customer surplus errors tracked.")
 
-        # 👑 ΕΔΩ: Εξαναγκασμένη live εμφάνιση του Note με παράκαμψη των r_note status filters!
+        # 👑 ΚΛΕΙΔΩΣΕ: Τώρα διαβάζει απευθείας τις συντεταγμένες κάτω από τον πίνακα, παρακάμπτοντας όλα τα string blocks!
         with st.expander("📉 User shortfall not applied to bulk ledger", expanded=True):
             if lower_shortfall_records:
-                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_live_sync_forced")
+                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_absolute_sync")
             else:
                 st.info("No active customer shortfall deviations discovered.")
     # ==========================================
