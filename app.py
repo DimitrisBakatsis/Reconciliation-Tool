@@ -1155,15 +1155,20 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-    # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS
+# =========================================================================================
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (ROBUST DYNAMIC PARSING SUITE)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
         
-        cub_raw_lisa = safe_float(df_tab10.iloc[9, 2]) if df_tab10.shape[0] > 9 else 218409519.50
-        plum_raw_lisa = safe_float(df_tab10.iloc[9, 3]) if df_tab10.shape[0] > 9 else 218409519.50
-        diff_raw_lisa = safe_float(df_tab10.iloc[9, 4]) if df_tab10.shape[0] > 9 else 0.0
+        # 🛠️ 1. Dynamic Metric Discovery (Ψάχνουμε τα live σύνολα μέσα στο sheet)
+        cub_raw_lisa = parse_live_value(df_tab10, "Combined User Balance (Ledger)", 1, 0.0)
+        plum_raw_lisa = parse_live_value(df_tab10, "Plum Ledger Balance", 1, 0.0)
+        
+        # Αν οι απόλυτοι τίτλοι διαφέρουν, κάνουμε fallback σε live υπολογισμό ή static αρχικούς ελέγχους
+        if cub_raw_lisa == 0.0: cub_raw_lisa = parse_live_value(df_tab10, "Combined User", 1, 0.0)
+        if plum_raw_lisa == 0.0: plum_raw_lisa = parse_live_value(df_tab10, "Plum Ledger", 1, 0.0)
+        diff_raw_lisa = abs(cub_raw_lisa - plum_raw_lisa)
 
         st.markdown("### 🏛️ LISA Internal Cash Reconciliation Ledger (Workings)")
         st.caption("FCA Compliance Working Papers mapping Internal Balance Controls for Lifetime ISA.")
@@ -1172,16 +1177,21 @@ try:
             <div class="metric-grid">
                 <div class="metric-card"><div class="metric-label">COMBINED USER BALANCE (LEDGER)</div><div class="metric-value blue">£ {cub_raw_lisa:,.2f}</div></div>
                 <div class="metric-card"><div class="metric-label">PLUM LEDGER BALANCE</div><div class="metric-value purple">£ {plum_raw_lisa:,.2f}</div></div>
-                <div class="metric-card"><div class="metric-label">UNADJUSTED BALANCE DIFFERENCE</div><div class="metric-value green">£ {diff_raw_lisa:,.2f}</div></div>
+                <div class="metric-card"><div class="metric-label">UNADJUSTED BALANCE DIFFERENCE</div><div class="metric-value red">£ {diff_raw_lisa:,.2f}</div></div>
             </div>
         """, unsafe_allow_html=True)
 
-        # Ingesting ημερολογιακά δεδομένα και ανοιχτά breaks από το Tab 10 του Excel
+        # 🛠️ 2. Dynamic Transaction Log Parsing (Σκανάρισμα για live εγγραφές)
         parsed_tab10_records = []
-        for r in range(12, df_tab10.shape[0]):
-            date_val = df_tab10.iloc[r, 0]
-            if pd.notna(date_val) and ("total" not in str(date_val).lower() and "sum" not in str(date_val).lower()):
-                clean_date = date_val.strftime('%d/%m/%Y') if hasattr(date_val, 'strftime') else str(date_val).split()[0]
+        for r in range(1, df_tab10.shape[0]):
+            cell_a = str(df_tab10.iloc[r, 0]).strip().lower()
+            cell_b = str(df_tab10.iloc[r, 1]).strip().lower()
+            
+            # Αν βρούμε έγκυρη ημερομηνία συναλλαγής
+            if pd.notna(df_tab10.iloc[r, 0]) and any(char.isdigit() for char in cell_a) and "/" in cell_a:
+                raw_date = df_tab10.iloc[r, 0]
+                clean_date = raw_date.strftime('%d/%m/%Y') if hasattr(raw_date, 'strftime') else str(raw_date).split()[0]
+                
                 parsed_tab10_records.append({
                     "D Date": clean_date,
                     "Product": str(df_tab10.iloc[r, 1]).strip() if pd.notna(df_tab10.iloc[r, 1]) else "LISA",
@@ -1191,20 +1201,42 @@ try:
                     "Action Taken": str(df_tab10.iloc[r, 6]).strip() if df_tab10.shape[1] > 6 and pd.notna(df_tab10.iloc[r, 6]) else "N/A"
                 })
 
-        df_tab10_grid = pd.DataFrame(parsed_tab10_records) if parsed_tab10_records else pd.DataFrame([
-            {"D Date": "16/06/2026", "Product": "LISA", "Combined User Bal": 0.0, "Plum Ledger Bal": 0.0, "Commentary / Description": "No active backlogs mapped.", "Action Taken": "Verified by Compliance."}
-        ])
+        # Εμφάνιση του κεντρικού πίνακα
+        if parsed_tab10_records:
+            df_tab10_grid = pd.DataFrame(parsed_tab10_records)
+        else:
+            # Fallback αν το dynamic loop δεν βρει γραμμές, τραβάμε απευθείας το data block (γραμμές 12-20)
+            fallback_rows = []
+            for r in range(11, min(22, df_tab10.shape[0])):
+                if pd.notna(df_tab10.iloc[r, 2]) or pd.notna(df_tab10.iloc[r, 3]):
+                    fallback_rows.append({
+                        "D Date": str(df_tab10.iloc[r, 0]).split()[0] if pd.notna(df_tab10.iloc[r, 0]) else "16/06/2026",
+                        "Product": "LISA",
+                        "Combined User Bal": safe_float(df_tab10.iloc[r, 2]),
+                        "Plum Ledger Bal": safe_float(df_tab10.iloc[r, 3]),
+                        "Commentary / Description": str(df_tab10.iloc[r, 4]).strip() if pd.notna(df_tab10.iloc[r, 4]) else "No active backlogs mapped.",
+                        "Action Taken": str(df_tab10.iloc[r, 5]).strip() if df_tab10.shape[1] > 5 and pd.notna(df_tab10.iloc[r, 5]) else "Verified by Compliance."
+                    })
+            df_tab10_grid = pd.DataFrame(fallback_rows) if fallback_rows else pd.DataFrame()
 
-        st.data_editor(df_tab10_grid, column_config={
-            "Combined User Bal": st.column_config.NumberColumn("Combined User Bal", format="£%,.2f"),
-            "Plum Ledger Bal": st.column_config.NumberColumn("Plum Ledger Bal", format="£%,.2f")
-        }, use_container_width=True, hide_index=True, key="tab10_adj_matrix_secure")
+        if not df_tab10_grid.empty:
+            st.data_editor(df_tab10_grid, column_config={
+                "Combined User Bal": st.column_config.NumberColumn("Combined User Bal", format="£%,.2f"),
+                "Plum Ledger Bal": st.column_config.NumberColumn("Plum Ledger Bal", format="£%,.2f")
+            }, use_container_width=True, hide_index=True, key="tab10_data_matrix_v2")
+        else:
+            st.info("No transactional rows detected in the ingested worksheet.")
 
-        adj_cub_lisa = safe_float(df_tab10.iloc[30, 2]) if df_tab10.shape[0] > 30 else 218409519.50
-        adj_plum_lisa = safe_float(df_tab10.iloc[30, 3]) if df_tab10.shape[0] > 30 else 218409519.50
-        adj_diff_lisa = safe_float(df_tab10.iloc[30, 4]) if df_tab10.shape[0] > 30 else 0.0
-        sum_breaks_lisa = safe_float(df_tab10.iloc[31, 4]) if df_tab10.shape[0] > 31 else 0.0
-        tot_diff_lisa = safe_float(df_tab10.iloc[32, 4]) if df_tab10.shape[0] > 32 else 0.0
+        # 🛠️ 3. Adjusted Totals & Sign-off Thresholds Lookup
+        adj_cub_lisa = parse_live_value(df_tab10, "Adjusted Combined User Balance", 1, 0.0)
+        if adj_cub_lisa == 0.0: adj_cub_lisa = parse_live_value(df_tab10, "Adjusted Combined User", 1, cub_raw_lisa)
+        
+        adj_plum_lisa = parse_live_value(df_tab10, "Adjusted Plum Ledger Balance", 1, 0.0)
+        if adj_plum_lisa == 0.0: adj_plum_lisa = parse_live_value(df_tab10, "Adjusted Plum Ledger", 1, plum_raw_lisa)
+        
+        adj_diff_lisa = parse_live_value(df_tab10, "Adjusted Diff Rec Pool", 1, abs(adj_cub_lisa - adj_plum_lisa))
+        sum_breaks_lisa = parse_live_value(df_tab10, "Sum of Below Tracked Breaks", 1, 0.0)
+        tot_diff_lisa = parse_live_value(df_tab10, "Total Net Difference Residual", 1, 0.0)
 
         col_left_adj_lisa, col_right_adj_lisa = st.columns(2)
         with col_left_adj_lisa:
