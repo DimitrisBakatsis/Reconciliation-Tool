@@ -915,7 +915,7 @@ try:
             st.info("No outstanding ledger entries awaiting banking execution.")
 
 # =========================================================================================
-    # 🏛️ 📊 TAB 8: CISA CITI V LEDGER (ROBUST DYNAMIC HEADER MAPPING ENGINE)
+    # 🏛️ 📊 TAB 8: CISA CITI V LEDGER (DYNAMIC SPREADSHEET INGESTION & 4-DASHBOARD SPLIT)
     # =========================================================================================
     elif selected_tab == "8. CISA Citi v Ledger":
         df_tab8 = pd.read_excel(EXCEL_FILE, sheet_name="8. CISA Citi v Ledger", header=None)
@@ -940,7 +940,6 @@ try:
         header_row_idx = None
         col_mapping = {}
         
-        # Ψάχνουμε να βρούμε σε ποια γραμμή βρίσκονται τα headers του πίνακα
         for r in range(15):
             row_str = " ".join([str(cell).lower() for cell in df_tab8.iloc[r, :] if pd.notna(cell)])
             if "plum order type" in row_str or "transactiv plum" in row_str:
@@ -949,8 +948,6 @@ try:
                 
         if header_row_idx is not None:
             headers = [str(cell).strip().lower() for cell in df_tab8.iloc[header_row_idx, :]]
-            
-            # Χαρτογράφηση των στηλών με βάση το τι γράφει το Excel
             for idx, h in enumerate(headers):
                 if "status" in h: col_mapping["status"] = idx
                 elif "date" in h: col_mapping["date"] = idx
@@ -961,10 +958,9 @@ try:
                 elif "citi amount" in h: col_mapping["citi_amt"] = idx
                 elif "description" in h: col_mapping["desc"] = idx
                 elif "credit" in h or "debit" in h or "type" in h: 
-                    # Αν η στήλη περιέχει credit/debit τύπους (π.χ. στήλη G/H)
                     if "amount" not in h: col_mapping["direction"] = idx
 
-        # Fallbacks σε περίπτωση που αποτύχει η δυναμική εύρεση
+        # Fallbacks
         status_col = col_mapping.get("status", 0)
         date_col = col_mapping.get("date", 1)
         citi_ref_col = col_mapping.get("citi_ref", 4)
@@ -978,11 +974,8 @@ try:
         start_data_row = header_row_idx + 1 if header_row_idx is not None else 5
         parsed_records = []
         
-        # Ingestion loop
         for r in range(start_data_row, df_tab8.shape[0]):
             status_val = str(df_tab8.iloc[r, status_col]).strip() if pd.notna(df_tab8.iloc[r, status_col]) else ""
-            
-            # Διαβάζουμε όλες τις γραμμές που έχουν έγκυρα ποσά
             p_amt = safe_float(df_tab8.iloc[r, plum_amt_col])
             c_amt = safe_float(df_tab8.iloc[r, citi_amt_col])
             
@@ -993,10 +986,7 @@ try:
                 else:
                     clean_date = "07/07/2026"
                     
-                # Προσδιορισμός κατηγορίας και κατεύθυνσης (aggregate/internal, credit/debit)
-                # Αν δεν βρέθηκε στήλη, σκανάρουμε όλη τη γραμμή για τις λέξεις κλειδιά
                 row_dump = " ".join([str(cell).lower() for cell in df_tab8.iloc[r, :].values if pd.notna(cell)])
-                
                 direction = "credit" if "credit" in row_dump else "debit"
                 category = "internal_transaction" if "internal" in row_dump else "aggregate"
                 
@@ -1012,9 +1002,8 @@ try:
                     "Citi Description": str(df_tab8.iloc[r, desc_col]).strip() if pd.notna(df_tab8.iloc[r, desc_col]) else "N/A"
                 })
 
-        df_master_t8 = pd.DataFrame(parsed_audit_records) if 'parsed_audit_records' in locals() and parsed_audit_records else pd.DataFrame(parsed_records)
+        df_master_t8 = pd.DataFrame(parsed_records) if parsed_records else pd.DataFrame()
 
-        # Configurations στηλών
         t8_column_specs = {
             "Investigation Status": st.column_config.TextColumn("Status Mode"),
             "Date": st.column_config.TextColumn("Execution Date"),
@@ -1032,15 +1021,15 @@ try:
         df_dash1 = df_master_t8[(df_master_t8["Order Category"] == "aggregate") & (df_master_t8["Direction"] == "credit")] if not df_master_t8.empty else pd.DataFrame()
         dash1_sum = df_dash1["Citi Cash Amount"].sum() if not df_dash1.empty else 2868893.24
         
-        with st.expander(f"🟢 TOTAL AGGREGATE CREDITS", expanded=True):
+        with st.expander(f"🟢 DASHBOARD A: TOTAL AGGREGATE CREDITS", expanded=True):
             st.markdown(f"""
-                <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
-                    <div class="table-title" style="color: #10b981;">Plum Automated Bulk User Deposits (Citi Statement Match)</div>
-                    <div class="net-change-badge green">Sum Value: £ {dash1_sum:,.2f}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background-color: #0d0f16; border: 1px solid #1f2937; padding: 14px 20px; border-radius: 8px 8px 0 0;">
+                    <div style="font-size: 13px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Plum Automated Bulk User Deposits (Citi Statement Match)</div>
+                    <div style="font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px; background-color: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">Sum Value: £ {dash1_sum:,.2f}</div>
                 </div>
             """, unsafe_allow_html=True)
             if not df_dash1.empty:
-                st.data_editor(df_dash1[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash1_editor_v2")
+                st.data_editor(df_dash1[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash1_editor_v3")
             else:
                 st.info("No lines discovered matching current filter subset.")
 
@@ -1050,15 +1039,15 @@ try:
         df_dash2 = df_master_t8[(df_master_t8["Order Category"] == "aggregate") & (df_master_t8["Direction"] == "debit")] if not df_master_t8.empty else pd.DataFrame()
         dash2_sum = df_dash2["Citi Cash Amount"].sum() if not df_dash2.empty else 2220411.94
         
-        with st.expander(f"🔴 TOTAL AGGREGATE DEBITS", expanded=True):
+        with st.expander(f"🔴 DASHBOARD B: TOTAL AGGREGATE DEBITS", expanded=True):
             st.markdown(f"""
-                <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
-                    <div class="table-title" style="color: #ef4444;">Plum Automated Bulk User Withdrawals (Citi Statement Match)</div>
-                    <div class="net-change-badge red">Sum Value: £ {dash2_sum:,.2f}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background-color: #0d0f16; border: 1px solid #1f2937; padding: 14px 20px; border-radius: 8px 8px 0 0;">
+                    <div style="font-size: 13px; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px;">Plum Automated Bulk User Withdrawals (Citi Statement Match)</div>
+                    <div style="font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px; background-color: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">Sum Value: £ {dash2_sum:,.2f}</div>
                 </div>
             """, unsafe_allow_html=True)
             if not df_dash2.empty:
-                st.data_editor(df_dash2[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash2_editor_v2")
+                st.data_editor(df_dash2[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash2_editor_v3")
             else:
                 st.info("No lines discovered matching current filter subset.")
 
@@ -1068,15 +1057,15 @@ try:
         df_dash3 = df_master_t8[(df_master_t8["Order Category"] == "internal_transaction") & (df_master_t8["Direction"] == "credit")] if not df_master_t8.empty else pd.DataFrame()
         dash3_sum = df_dash3["Plum Invoiced Amount"].sum() if not df_dash3.empty else 2458082.97
         
-        with st.expander(f"🔵 INTERNAL TRANSACTION CREDITS", expanded=False):
+        with st.expander(f"🔵 DASHBOARD C: INTERNAL TRANSACTION CREDITS", expanded=False):
             st.markdown(f"""
-                <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
-                    <div class="table-title" style="color: #3b82f6;">Corporate Inter-Account Safe Funding & Asset Adjustments</div>
-                    <div class="net-change-badge blue">Sum Value: £ {dash3_sum:,.2f}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background-color: #0d0f16; border: 1px solid #1f2937; padding: 14px 20px; border-radius: 8px 8px 0 0;">
+                    <div style="font-size: 13px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px;">Corporate Inter-Account Safe Funding & Asset Adjustments</div>
+                    <div style="font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px; background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">Sum Value: £ {dash3_sum:,.2f}</div>
                 </div>
             """, unsafe_allow_html=True)
             if not df_dash3.empty:
-                st.data_editor(df_dash3[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash3_editor_v2")
+                st.data_editor(df_dash3[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash3_editor_v3")
             else:
                 st.info("No lines discovered matching current filter subset.")
 
@@ -1086,17 +1075,17 @@ try:
         df_dash4 = df_master_t8[(df_master_t8["Order Category"] == "internal_transaction") & (df_master_t8["Direction"] == "debit")] if not df_master_t8.empty else pd.DataFrame()
         dash4_sum = df_dash4["Plum Invoiced Amount"].sum() if not df_dash4.empty else 2120803.93
         
-        with st.expander(f"🟠 INTERNAL TRANSACTION DEBITS", expanded=False):
+        with st.expander(f"🟠 DASHBOARD D: INTERNAL TRANSACTION DEBITS", expanded=False):
             st.markdown(f"""
-                <div class="table-header-container" style="margin-top: 5px; margin-bottom: 0px;">
-                    <div class="table-title" style="color: #f59e0b;">Corporate Inter-Account Deficit Settlement Transfers</div>
-                    <div class="net-change-badge orange">Sum Value: £ {dash4_sum:,.2f}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background-color: #0d0f16; border: 1px solid #1f2937; padding: 14px 20px; border-radius: 8px 8px 0 0;">
+                    <div style="font-size: 13px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px;">Corporate Inter-Account Deficit Settlement Transfers</div>
+                    <div style="font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px; background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">Sum Value: £ {dash4_sum:,.2f}</div>
                 </div>
             """, unsafe_allow_html=True)
             if not df_dash4.empty:
-                st.data_editor(df_dash4[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash4_editor_v2")
+                st.data_editor(df_dash4[display_columns], column_config=t8_column_specs, use_container_width=True, hide_index=True, key="t8_dash4_editor_v3")
             else:
-                st.info("No lines discovered matching current filter subset.")
+                st.info("No active lines matching 'internal_transaction' + 'debit' conditions found in the Excel sheet.")
     # ==========================================
     # 📂 FALLBACK VIEW FOR OTHER SHEETS
     # ==========================================
