@@ -1156,7 +1156,7 @@ try:
         """, unsafe_allow_html=True)
 
 # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (🎯 LIVE BREAKS KEYWORD ANCHOR ENGINE)
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (🎯 LIVE BREAKS KEYWORD ANCHOR ENGINE - HEADER FIXED)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
@@ -1262,11 +1262,10 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-        # 🛠️ 4. 🎯 Live Shortfall Ingestion Engine (Ingests dynamically from row 84 onwards)
+        # 🛠️ 4. Live Shortfall Ingestion Engine (With Double Header Filter Fix)
         shortfall_anchor_row = None
         lower_shortfall_records = []
         
-        # Εντοπίζουμε τη γραμμή-άγκυρα "User shortfall not applied to bulk ledger"
         for r_search in range(df_tab10.shape[0]):
             cell_content = str(df_tab10.iloc[r_search, 3]).lower().strip() if pd.notna(df_tab10.iloc[r_search, 3]) else ""
             if "user shortfall not applied" in cell_content:
@@ -1274,24 +1273,23 @@ try:
                 break
                 
         if shortfall_anchor_row is not None:
-            # Ξεκινάμε 2 γραμμές κάτω από τον τίτλο για να προσπεράσουμε τα headers (Date, Errored Order ID, κλπ)
-            for r_note in range(shortfall_anchor_row + 2, df_tab10.shape[0]):
-                note_date_cell = df_tab10.iloc[r_note, 3] # 📅 Στήλη D (Index 3)
+            for r_note in range(shortfall_anchor_row + 1, df_tab10.shape[0]):
+                note_date_cell = df_tab10.iloc[r_note, 3] # 📅 Στήλη D
                 
-                # Σταματάμε αν αδειάσει η στήλη της ημερομηνίας
                 if pd.isna(note_date_cell) or str(note_date_cell).strip() == "":
                     break
                     
-                note_date = note_date_cell.strftime('%d/%m/%Y') if hasattr(note_date_cell, 'strftime') else str(note_date_cell).split()[0]
-                
-                # Απόλυτη αντιστοίχιση βάσει της δομής του screenshot σου
                 break_details = str(df_tab10.iloc[r_note, 4]).strip() if pd.notna(df_tab10.iloc[r_note, 4]) else "N/A"
+                
+                # 🛑 FILTER: Αν η γραμμή περιέχει τους τίτλους των στηλών του Excel, την προσπερνάμε αμέσως
+                if "errored order" in break_details.lower() or "date" in str(note_date_cell).lower():
+                    continue
+                    
+                note_date = note_date_cell.strftime('%d/%m/%Y') if hasattr(note_date_cell, 'strftime') else str(note_date_cell).split()[0]
                 admin_link    = str(df_tab10.iloc[r_note, 6]).strip() if pd.notna(df_tab10.iloc[r_note, 6]) else "N/A"
                 action_text   = str(df_tab10.iloc[r_note, 7]).strip() if pd.notna(df_tab10.iloc[r_note, 7]) else "N/A"
                 jira_ticket   = str(df_tab10.iloc[r_note, 9]).strip() if pd.notna(df_tab10.iloc[r_note, 9]) else "N/A"
-                
-                # 💰 Το Amount βρίσκεται στη στήλη M (Index 12)
-                note_amt = safe_float(df_tab10.iloc[r_note, 12]) if df_tab10.shape[1] > 12 else 0.0
+                note_amt      = safe_float(df_tab10.iloc[r_note, 12]) if df_tab10.shape[1] > 12 else 0.0
                 
                 lower_shortfall_records.append({
                     "Date": note_date,
@@ -1312,10 +1310,9 @@ try:
         with st.expander("📈 User surplus not applied to bulk ledger"):
             st.info("No active customer surplus errors tracked.")
 
-        # 👑 ΤΕΛΕΙΟ: Τώρα διαβάζει live από τη γραμμή 84+ και τραβάει το σωστό ποσό από τη στήλη M, υποστηρίζοντας απεριόριστες γραμμές!
         with st.expander("📉 User shortfall not applied to bulk ledger", expanded=True):
             if lower_shortfall_records:
-                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_live_sync_v5_final")
+                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_live_sync_v6_clean")
             else:
                 st.info("No active customer shortfall deviations discovered.")
     # ==========================================
