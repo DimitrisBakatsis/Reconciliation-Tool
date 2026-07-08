@@ -1156,7 +1156,7 @@ try:
         """, unsafe_allow_html=True)
 
 # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (🎯 LIVE BREAKS KEYWORD ANCHOR ENGINE - HEADER FIXED)
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (🎯 GLOBAL ROW SCANNER - ULTIMATE CLEAN FIX)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
@@ -1262,13 +1262,14 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-        # 🛠️ 4. Live Shortfall Ingestion Engine (With Double Header Filter Fix)
+        # 🛠️ 4. Global Row Scanner for Shortfall Notes (Αναζήτηση σε όλο το πλάτος της γραμμής)
         shortfall_anchor_row = None
         lower_shortfall_records = []
         
         for r_search in range(df_tab10.shape[0]):
-            cell_content = str(df_tab10.iloc[r_search, 3]).lower().strip() if pd.notna(df_tab10.iloc[r_search, 3]) else ""
-            if "user shortfall not applied" in cell_content:
+            # Ελέγχουμε όλες τις στήλες της γραμμής για να βρούμε το label
+            row_dump_txt = " ".join([str(df_tab10.iloc[r_search, col]).lower().strip() for col in range(min(5, df_tab10.shape[1])) if pd.notna(df_tab10.iloc[r_search, col])])
+            if "user shortfall not applied" in row_dump_txt:
                 shortfall_anchor_row = r_search
                 break
                 
@@ -1277,28 +1278,33 @@ try:
                 note_date_cell = df_tab10.iloc[r_note, 3] # 📅 Στήλη D
                 
                 if pd.isna(note_date_cell) or str(note_date_cell).strip() == "":
-                    break
-                    
-                break_details = str(df_tab10.iloc[r_note, 4]).strip() if pd.notna(df_tab10.iloc[r_note, 4]) else "N/A"
-                
-                # 🛑 FILTER: Αν η γραμμή περιέχει τους τίτλους των στηλών του Excel, την προσπερνάμε αμέσως
-                if "errored order" in break_details.lower() or "date" in str(note_date_cell).lower():
+                    # Αν βρούμε άλλη κατηγορία από κάτω, σταματάμε
+                    if r_note > shortfall_anchor_row + 5:
+                        break
                     continue
                     
-                note_date = note_date_cell.strftime('%d/%m/%Y') if hasattr(note_date_cell, 'strftime') else str(note_date_cell).split()[0]
-                admin_link    = str(df_tab10.iloc[r_note, 6]).strip() if pd.notna(df_tab10.iloc[r_note, 6]) else "N/A"
-                action_text   = str(df_tab10.iloc[r_note, 7]).strip() if pd.notna(df_tab10.iloc[r_note, 7]) else "N/A"
-                jira_ticket   = str(df_tab10.iloc[r_note, 9]).strip() if pd.notna(df_tab10.iloc[r_note, 9]) else "N/A"
-                note_amt      = safe_float(df_tab10.iloc[r_note, 12]) if df_tab10.shape[1] > 12 else 0.0
+                break_details = str(df_tab10.iloc[r_note, 4]).strip() if pd.notna(df_tab10.iloc[r_note, 4]) else ""
                 
-                lower_shortfall_records.append({
-                    "Date": note_date,
-                    "Errored Order ID/break details": break_details,
-                    "Admin Link": admin_link,
-                    "Action": action_text,
-                    "Jira Ticket": jira_ticket,
-                    "Amount": note_amt
-                })
+                # 🛑 Φίλτρο Καθαρισμού: Αν είναι η διπλή γραμμή των headers, την προσπερνάμε
+                if "errored order" in break_details.lower() or "date" in str(note_date_cell).lower():
+                    continue
+                
+                # Επιβεβαίωση ότι η γραμμή έχει έγκυρα δεδομένα ημερομηνίας
+                if any(char.isdigit() for char in str(note_date_cell)):
+                    note_date = note_date_cell.strftime('%d/%m/%Y') if hasattr(note_date_cell, 'strftime') else str(note_date_cell).split()[0]
+                    admin_link    = str(df_tab10.iloc[r_note, 6]).strip() if pd.notna(df_tab10.iloc[r_note, 6]) else "N/A"
+                    action_text   = str(df_tab10.iloc[r_note, 7]).strip() if pd.notna(df_tab10.iloc[r_note, 7]) else "N/A"
+                    jira_ticket   = str(df_tab10.iloc[r_note, 9]).strip() if pd.notna(df_tab10.iloc[r_note, 9]) else "N/A"
+                    note_amt      = safe_float(df_tab10.iloc[r_note, 12]) if df_tab10.shape[1] > 12 else 0.0
+                    
+                    lower_shortfall_records.append({
+                        "Date": note_date,
+                        "Errored Order ID/break details": break_details,
+                        "Admin Link": admin_link,
+                        "Action": action_text,
+                        "Jira Ticket": jira_ticket,
+                        "Amount": note_amt
+                    })
 
         st.markdown("### 🔍 Categorized System Breaks & Audit Logs Expanse")
         with st.expander("💳 Bulk Ledger credits not applied to user balance (Live File Synced)", expanded=True):
@@ -1312,7 +1318,7 @@ try:
 
         with st.expander("📉 User shortfall not applied to bulk ledger", expanded=True):
             if lower_shortfall_records:
-                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_live_sync_v6_clean")
+                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_ultimate_clean_v7")
             else:
                 st.info("No active customer shortfall deviations discovered.")
     # ==========================================
