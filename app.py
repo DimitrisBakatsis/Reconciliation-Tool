@@ -1156,7 +1156,7 @@ try:
         """, unsafe_allow_html=True)
 
 # =========================================================================================
-    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (STRICT POSITIONAL LOWER BREAKS SCANNERS)
+    # 🏛️ TAB 10: LISA INTERNAL WORKINGS (🎯 LIVE BREAKS KEYWORD ANCHOR ENGINE)
     # =========================================================================================
     elif selected_tab == "10. LISA Internal Workings":
         df_tab10 = pd.read_excel(EXCEL_FILE, sheet_name="10. LISA Internal Workings", header=None)
@@ -1180,13 +1180,13 @@ try:
             </div>
         """, unsafe_allow_html=True)
 
-        # 🛠️ 2. Dynamic Text Scanner Loop (D23:M42)
+        # 🛠️ 2. Dynamic Text Scanner Loop for Internal Ledger Workings (D23:M42)
         parsed_tab10_records = []
         
         for r in range(22, df_tab10.shape[0]):
             date_cell = df_tab10.iloc[r, 3] # 📅 Στήλη D (Index 3)
             
-            if pd.isna(date_cell) or any(k in str(date_cell).lower() for k in ["total", "adjusted", "sum", "reconciliation"]):
+            if pd.isna(date_cell) or any(k in str(date_cell).lower() for k in ["total", "adjusted", "sum", "reconciliation", "bulk ledger"]):
                 break
                 
             clean_date = date_cell.strftime('%d/%m/%Y') if hasattr(date_cell, 'strftime') else str(date_cell).split()[0]
@@ -1220,11 +1220,11 @@ try:
             st.data_editor(df_tab10_grid, column_config={
                 "Combined User Bal": st.column_config.NumberColumn("Combined User Bal", format="£%,.2f"),
                 "Plum Ledger Bal": st.column_config.NumberColumn("Plum Ledger Bal", format="£%,.2f")
-            }, use_container_width=True, hide_index=True, key="tab10_dynamic_lisa_matrix_v4")
+            }, use_container_width=True, hide_index=True, key="tab10_dynamic_lisa_matrix_v5")
         else:
             st.info("No active lines found inside strict D23:M42 coordinate matrix blocks.")
 
-        # 🛠️ 3. Adjusted Totals Panel
+        # 🛠️ 3. Adjusted Totals Panel Scan
         adj_cub_lisa = 0.0
         adj_plum_lisa = 0.0
         sum_breaks_lisa = 0.0
@@ -1262,32 +1262,43 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 
-        # 🛠️ 4. Forced Positional Note Extractor (Σαρώνει απευθείας τις κάτω γραμμές του Excel 42-55)
+        # 🛠️ 4. 🎯 Live Shortfall Ingestion Engine (Ingests dynamically from row 84 onwards)
+        shortfall_anchor_row = None
         lower_shortfall_records = []
-        for r_note in range(42, min(55, df_tab10.shape[0])):
-            note_date_cell = df_tab10.iloc[r_note, 3] # 📅 Στήλη D
-            
-            # Αν βρούμε έγκυρη ημερομηνία στις κάτω γραμμές, σημαίνει ότι υπάρχει καταγεγραμμένο break!
-            if pd.notna(note_date_cell) and any(char.isdigit() for char in str(note_date_cell)):
+        
+        # Εντοπίζουμε τη γραμμή-άγκυρα "User shortfall not applied to bulk ledger"
+        for r_search in range(df_tab10.shape[0]):
+            cell_content = str(df_tab10.iloc[r_search, 3]).lower().strip() if pd.notna(df_tab10.iloc[r_search, 3]) else ""
+            if "user shortfall not applied" in cell_content:
+                shortfall_anchor_row = r_search
+                break
+                
+        if shortfall_anchor_row is not None:
+            # Ξεκινάμε 2 γραμμές κάτω από τον τίτλο για να προσπεράσουμε τα headers (Date, Errored Order ID, κλπ)
+            for r_note in range(shortfall_anchor_row + 2, df_tab10.shape[0]):
+                note_date_cell = df_tab10.iloc[r_note, 3] # 📅 Στήλη D (Index 3)
+                
+                # Σταματάμε αν αδειάσει η στήλη της ημερομηνίας
+                if pd.isna(note_date_cell) or str(note_date_cell).strip() == "":
+                    break
+                    
                 note_date = note_date_cell.strftime('%d/%m/%Y') if hasattr(note_date_cell, 'strftime') else str(note_date_cell).split()[0]
                 
-                # Τραβάμε την περιγραφή από τη στήλη E ή I
-                note_text = "Internal movements / Shortfall Residual Interest Portfolio Correction"
-                for c_scan in range(4, df_tab10.shape[1]):
-                    scan_val = df_tab10.iloc[r_note, c_scan]
-                    if pd.notna(scan_val) and any(char.isalpha() for char in str(scan_val)) and len(str(scan_val).strip()) > 5:
-                        note_text = str(scan_val).strip()
-                        break
-                        
-                # Τραβάμε το ποσό (Στήλη F ή G)
-                note_amt = safe_float(df_tab10.iloc[r_note, 6]) if safe_float(df_tab10.iloc[r_note, 6]) != 0.0 else safe_float(df_tab10.iloc[r_note, 5])
+                # Απόλυτη αντιστοίχιση βάσει της δομής του screenshot σου
+                break_details = str(df_tab10.iloc[r_note, 4]).strip() if pd.notna(df_tab10.iloc[r_note, 4]) else "N/A"
+                admin_link    = str(df_tab10.iloc[r_note, 6]).strip() if pd.notna(df_tab10.iloc[r_note, 6]) else "N/A"
+                action_text   = str(df_tab10.iloc[r_note, 7]).strip() if pd.notna(df_tab10.iloc[r_note, 7]) else "N/A"
+                jira_ticket   = str(df_tab10.iloc[r_note, 9]).strip() if pd.notna(df_tab10.iloc[r_note, 9]) else "N/A"
+                
+                # 💰 Το Amount βρίσκεται στη στήλη M (Index 12)
+                note_amt = safe_float(df_tab10.iloc[r_note, 12]) if df_tab10.shape[1] > 12 else 0.0
                 
                 lower_shortfall_records.append({
                     "Date": note_date,
-                    "Errored Order ID/break details": note_text,
-                    "Admin Link": "N/A",
-                    "Action": "To be moved/adjusted against LISA corporate pool interest",
-                    "Jira Ticket": "N/A",
+                    "Errored Order ID/break details": break_details,
+                    "Admin Link": admin_link,
+                    "Action": action_text,
+                    "Jira Ticket": jira_ticket,
                     "Amount": note_amt
                 })
 
@@ -1301,10 +1312,10 @@ try:
         with st.expander("📈 User surplus not applied to bulk ledger"):
             st.info("No active customer surplus errors tracked.")
 
-        # 👑 ΚΛΕΙΔΩΣΕ: Τώρα διαβάζει απευθείας τις συντεταγμένες κάτω από τον πίνακα, παρακάμπτοντας όλα τα string blocks!
+        # 👑 ΤΕΛΕΙΟ: Τώρα διαβάζει live από τη γραμμή 84+ και τραβάει το σωστό ποσό από τη στήλη M, υποστηρίζοντας απεριόριστες γραμμές!
         with st.expander("📉 User shortfall not applied to bulk ledger", expanded=True):
             if lower_shortfall_records:
-                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_absolute_sync")
+                st.data_editor(pd.DataFrame(lower_shortfall_records), column_config={"Amount": st.column_config.NumberColumn("Amount", format="£%,.2f")}, use_container_width=True, hide_index=True, key="t10_sh_breaks_live_sync_v5_final")
             else:
                 st.info("No active customer shortfall deviations discovered.")
     # ==========================================
